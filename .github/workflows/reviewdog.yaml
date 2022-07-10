@@ -1,5 +1,5 @@
 name: reviewdog
-on: [push,pull_request]
+on: push
 
 jobs:
   misspell:
