@@ -12,7 +12,7 @@ type OrderDetails struct {
 
 const (
 	StatusActive       = "active"
-	StatusCanceled     = "cancelled" // nolint
+	StatusCanceled     = "cancelled"
 	StatusPendingTrans = "pending_transaction"
 	StatusPurchased    = "purchased"
 )
