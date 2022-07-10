@@ -4,16 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/shlex"
+	"github.com/oriser/bolt/service"
+	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/slackevents"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/google/shlex"
-	"github.com/oriser/bolt/service"
-	"github.com/slack-go/slack"
-	"github.com/slack-go/slack/slackevents"
 )
 
 func (s *SlackBot) ListenAndServe(ctx context.Context) error {
