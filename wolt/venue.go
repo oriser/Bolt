@@ -23,14 +23,14 @@ type Coordinate struct {
 }
 
 type PriceRanges struct {
-	BasePrice      int             `json:"base_price,required"`
+	BasePrice      int             `json:"base_price"`
 	DistanceRanges []DistanceRange `json:"distance_ranges"`
 }
 
 type DistanceRange struct {
-	AddedPrice  int `json:"a,required"`
-	MinDistance int `json:"min,required"`
-	MaxDistance int `json:"max,required"`
+	AddedPrice  int `json:"a"`
+	MinDistance int `json:"min"`
+	MaxDistance int `json:"max"`
 }
 
 // haversin(θ) function

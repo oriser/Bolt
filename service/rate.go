@@ -75,7 +75,7 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 
 	groupRate, err := h.getRateForGroup(req.Channel, groupID.ID, req.MessageID)
 	if err != nil {
-		if strings.Contains(err.Error(), "order cancelled") {
+		if strings.Contains(err.Error(), "order canceled") {
 			h.informEvent(req.Channel, fmt.Sprintf("Order for group ID %s was canceled", groupID.ID), "", req.MessageID)
 			return "", nil
 		}
@@ -246,7 +246,7 @@ func (h *Service) waitForGroupProgress(g *wolt.Group) error {
 	}
 
 	if status == wolt.StatusCanceled {
-		return fmt.Errorf("order cancelled")
+		return fmt.Errorf("order canceled")
 	}
 
 	if status != wolt.StatusPendingTrans && status != wolt.StatusPurchased {

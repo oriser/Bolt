@@ -12,7 +12,7 @@ type OrderDetails struct {
 
 const (
 	StatusActive       = "active"
-	StatusCanceled     = "cancelled"
+	StatusCanceled     = "cancelled" // nolint
 	StatusPendingTrans = "pending_transaction"
 	StatusPurchased    = "purchased"
 )
@@ -44,7 +44,7 @@ func (o *OrderDetails) DeliveryCoordinate() (Coordinate, error) {
 
 func (o *OrderDetails) Host() (string, error) {
 	if !o.ParsedOutput.Exists("participants") {
-		return "", fmt.Errorf("no participents")
+		return "", fmt.Errorf("no participants")
 	}
 	if !o.ParsedOutput.Exists("host_id") {
 		return "", fmt.Errorf("no host_id")
@@ -66,7 +66,7 @@ func (o *OrderDetails) Host() (string, error) {
 
 func (o *OrderDetails) RateByPerson() (map[string]float64, error) {
 	if !o.ParsedOutput.Exists("participants") {
-		return nil, fmt.Errorf("no participents")
+		return nil, fmt.Errorf("no participants")
 	}
 
 	output := make(map[string]float64)

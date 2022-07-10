@@ -178,7 +178,7 @@ func (h *Service) addDebts(usersMap map[string]*userDomain.User, initiatedTransp
 	}
 
 	//goland:noinspection ALL
-	ctx, _ := context.WithTimeout(context.Background(), h.debtMaximumDuration)
+	ctx, _ := context.WithTimeout(context.Background(), h.debtMaximumDuration) // nolint
 	go h.DebtWorker(ctx, orderID)
 
 	return nil
@@ -260,7 +260,7 @@ func (h *Service) markDebtAsPaid(orderID, reactedTransportID, initialChannel str
 			messageID = ""
 		}
 
-		h.informEvent(recipient, fmt.Sprintf("<@%s> marked himself as payed for order ID %s", borrower.TransportID, debt.OrderID), "", messageID)
+		h.informEvent(recipient, fmt.Sprintf("<@%s> marked himself as paid for order ID %s", borrower.TransportID, debt.OrderID), "", messageID)
 		return nil
 	}
 

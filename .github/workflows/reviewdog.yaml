@@ -13,6 +13,7 @@ jobs:
         with:
           github_token: ${{ secrets.github_token }}
           locale: "US"
+          pattern: "*.go"
   golangci-lint:
     name: golangci-lint
     runs-on: ubuntu-latest

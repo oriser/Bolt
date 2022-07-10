@@ -159,6 +159,7 @@ func TestAddListForOrderAndRemove(t *testing.T) {
 
 				// Checking that indeed it deleted
 				debts, err = dbTest.db.ListDebtsForOrderID(orderID)
+				assert.NoError(t, err)
 				assert.Len(t, debts, 0)
 			}
 		})
