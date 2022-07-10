@@ -1,0 +1,86 @@
+{
+  "checksum": "rYhW",
+  "created_at": {
+    "$date": 1653132616708
+  },
+  "details": {
+    "delivery_info": {
+      "location": {
+        "address": "Some Addr",
+        "coordinates": {
+          "coordinates": [
+            {{ .Location.Lat }},
+            {{ .Location.Lon }}
+          ],
+          "type": "Point"
+        }
+      },
+      "use_last_100m_address_picker": false
+    },
+    "delivery_method": "{{ .DeliveryMethod }}",
+    "emoji": "burger",
+    "name": "Bolt and friends",
+    "split_payment": false,
+    "venue_id": "{{ .VenueID }}"
+  },
+  "host_id": "a1ufke9dwe2wkn7pmw6qcwx9",
+  "id": "{{ .ID }}",
+  "locked": false,
+  "modified_at": {
+    "$date": 1653137584879
+  },
+  "participants": [
+{{- range .Participants }}
+    {
+      "basket": {
+        "comment": "",
+        "item_change_log": [],
+        "items": [
+{{- range .Items}}
+          {
+            "baseprice": {{ mul .BasePrice 100 }},
+            "checksum": "fef5c84c51f8d2124746907730e8b802",
+            "count": 1,
+            "end_amount": {{ mul .EndAmount 100 }},
+            "id": "eppe6kfy8hyefd33ocfl7uan",
+            "options": []
+          },
+{{- end }}
+          {
+            "baseprice": 0,
+            "checksum": "fef5c84c51f8d2124746907730e8b802",
+            "count": 1,
+            "end_amount": 0,
+            "id": "eppe6kfy8hyefd33ocfl7uan",
+            "options": []
+          }
+        ],
+        "items_missing": []
+      },
+      "corporate_participant_info": {},
+      "first_name": "{{ .FirstName }}",
+      "guest_id": "{{ .ID }}",
+      "user_id": "{{ .ID }}",
+      "profile_picture_url": "https://profile-avatar-cdn.wolt.com/s/rPMvhgB9sl4SbMYdWZ6V5wf_XZE46hAWMtIRKW01oLY/t/4",
+      "status": "{{ .Status }}",
+      "subscribed": true
+    },
+{{- end }}
+    {
+      "basket": {
+        "comment": "",
+        "item_change_log": [],
+        "items": [],
+        "items_missing": []
+      },
+      "first_name": "{{ .Host }}",
+      "last_name": "",
+      "profile_picture_url": "",
+      "status": "ready",
+      "subscribed": true,
+      "user_id": "a1ufke9dwe2wkn7pmw6qcwx9"
+    }
+  ],
+  "status": "{{ .Status }}",
+  "url": "https://wolt.com/group/{{ .ShortID }}"
+}

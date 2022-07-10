@@ -1,0 +1,4 @@
+.idea/*
+secrets.yaml
+build.sh
+build_dev.sh

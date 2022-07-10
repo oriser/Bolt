@@ -1,0 +1,81 @@
+# Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bolt-storage
+  labels:
+    app: bolt
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+# Configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bolt
+  labels:
+    app: bolt
+data:
+  DONT_JOIN_AFTER: "17:30"
+  DONT_JOIN_AFTER_TZ: "Asia/Jerusalem"
+  ADMIN_SLACK_USER_IDS: "<slack_user_id>,<slack_user_id>"
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bolt
+  labels:
+    app: bolt
+spec:
+  selector:
+    matchLabels:
+      app: bolt
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: bolt
+        tier: web
+    spec:
+      containers:
+        - name: bolt-app
+          image: <image>
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: slack-secret
+            - secretRef:
+                name: wolt-secret
+            - configMapRef:
+                name: bolt
+          volumeMounts:
+            - name: sqlite-storage
+              mountPath: /var/sqlite
+      volumes:
+        - name: sqlite-storage
+          persistentVolumeClaim:
+            claimName: bolt-storage
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: bolt
+  labels:
+    app: bolt
+spec:
+  selector:
+    app: bolt
+    tier: web
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: LoadBalancer
+  loadBalancerIP: "<static_ip>"
