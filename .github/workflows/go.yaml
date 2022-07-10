@@ -25,6 +25,6 @@ jobs:
       - name: Install goimports
         run: go install golang.org/x/tools/cmd/goimports@latest
       - name: fmt
-        run: if [[ $(goimports -l $(find . -name "*.go")) ]]; then echo "Please fix your go files formatting (goimports -l \$(find . -name \"*.go\"))"; exit 1; fi
+        run: if [[ $(goimports -l $(find . -name "*.go")) ]]; then echo "Please fix your go files formatting (goimports -w \$(find . -name \"*.go\"))"; exit 1; fi
       - name: Test
         run: go test -v ./...
