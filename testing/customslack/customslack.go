@@ -145,8 +145,8 @@ func (h *Handlers) reactionHandler(w http.ResponseWriter, r *http.Request) {
 	h.writeOKRes(w)
 }
 
-func (h *Handlers) queryUsers(w http.ResponseWriter, r *http.Request) {
-	res := map[string]any{
+func (h *Handlers) queryUsers(w http.ResponseWriter, _ *http.Request) {
+	res := map[string]any{ // nolint
 		"members": h.Members,
 	}
 	output, err := json.Marshal(res)
@@ -173,7 +173,7 @@ func (h *Handlers) getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := map[string]any{
+	res := map[string]any{ // nolint
 		"user": member,
 	}
 	output, err := json.Marshal(res)
@@ -206,7 +206,7 @@ func (h *Handlers) getConversationalReplies(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	res := map[string]any{
+	res := map[string]any{ // nolint
 		"messages": messages,
 	}
 	output, err := json.Marshal(res)

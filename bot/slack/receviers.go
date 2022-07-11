@@ -270,7 +270,7 @@ func (s *SlackBot) handleAddUserCommand(ctx context.Context, r *http.Request, w 
 	}
 
 	if r.Form.Get("command") != "/add-user" {
-		return false, fmt.Errorf("unkown command %q", r.Form.Get("command"))
+		return false, fmt.Errorf("unknown command %q", r.Form.Get("command"))
 	}
 
 	// Parse command

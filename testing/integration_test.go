@@ -378,7 +378,7 @@ func validateDebts(t *testing.T,
 		require.NoError(t, err)
 
 		_, err = WaitForOutboundSlackMessage(1*time.Second, tdata.slackServer,
-			fmt.Sprintf("<@%s> marked himself as payed for order ID %s", participantIDsMapping[participant], orderID),
+			fmt.Sprintf("<@%s> marked himself as paid for order ID %s", participantIDsMapping[participant], orderID),
 			participantIDsMapping[host], "", EqualMatch)
 		require.NoError(t, err)
 	}

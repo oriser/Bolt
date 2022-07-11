@@ -258,7 +258,7 @@ func (g *Group) VenueDetails() (*VenueDetails, error) {
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("send venue detials request: %w", err)
+		return nil, fmt.Errorf("send venue details request: %w", err)
 	}
 
 	if resp.StatusCode != 200 {
