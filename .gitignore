@@ -2,3 +2,4 @@
 secrets.yaml
 build.sh
 build_dev.sh
+deployment_dev.yaml
