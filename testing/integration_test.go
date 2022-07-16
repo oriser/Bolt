@@ -80,7 +80,7 @@ func initEnvs(t *testing.T, tdata testData) {
 
 	// Bot
 	require.NoError(t, os.Setenv("SLACK_SIGNIN_SECRET", "ignored"))
-	require.NoError(t, os.Setenv("SLACK_CLIENT_SECRET", "ignored"))
+	require.NoError(t, os.Setenv("SLACK_OAUTH_TOKEN", "ignored"))
 	require.NoError(t, os.Setenv("SLACK_API_URL", tdata.slackServer.GetAPIURL()))
 	require.NoError(t, os.Setenv("ADMIN_SLACK_USER_IDS", AdminSlackUserID))
 	require.NoError(t, os.Setenv("DISABLE_SECRET_VERIFICATION", "true"))

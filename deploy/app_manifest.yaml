@@ -1,0 +1,39 @@
+display_information:
+  name: Bolt
+  description: A bot for Wolt group orders
+features:
+  bot_user:
+    display_name: Bolt
+    always_online: true
+  slash_commands:
+    - command: /add-user
+      url: http://<static_ip>/add-user
+      description: Add a custom user to the DB
+      usage_hint: '"Lorem Ipsum" @Lorem'
+      should_escape: false
+  unfurl_domains:
+    - wolt.com
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - chat:write
+      - groups:history
+      - im:history
+      - links:read
+      - reactions:read
+      - users:read
+      - users:read.email
+      - reactions:write
+      - commands
+settings:
+  event_subscriptions:
+    request_url: http://<static_ip>/events-endpoint
+    bot_events:
+      - app_mention
+      - link_shared
+      - reaction_added
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

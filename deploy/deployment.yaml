@@ -1,7 +1,26 @@
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bolt
+---
+# Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: bolt
+  name: slack-secret
+  labels:
+    app: bolt
+data:
+  SLACK_OAUTH_TOKEN: <slack_oauth_token_base64>
+  SLACK_SIGNIN_SECRET: <slack_signin_secret_base64>
+---
 # Persistent Volume Claim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  namespace: bolt
   name: bolt-storage
   labels:
     app: bolt
@@ -10,24 +29,26 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 2Gi
+      storage: 1Gi
 ---
 # Configmap
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  namespace: bolt
   name: bolt
   labels:
     app: bolt
 data:
   DONT_JOIN_AFTER: "17:30"
   DONT_JOIN_AFTER_TZ: "Asia/Jerusalem"
-  ADMIN_SLACK_USER_IDS: "<slack_user_id>,<slack_user_id>"
+  ADMIN_SLACK_USER_IDS: "<slack_user_id>[,<slack_user_id>...]"
 ---
 # Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: bolt
   name: bolt
   labels:
     app: bolt
@@ -44,15 +65,13 @@ spec:
     spec:
       containers:
         - name: bolt-app
-          image: <image>
+          image: oriser/bolt
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
           envFrom:
             - secretRef:
                 name: slack-secret
-            - secretRef:
-                name: wolt-secret
             - configMapRef:
                 name: bolt
           volumeMounts:
@@ -67,6 +86,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: bolt
   name: bolt
   labels:
     app: bolt

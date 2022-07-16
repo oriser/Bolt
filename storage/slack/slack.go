@@ -19,7 +19,7 @@ const (
 )
 
 type Config struct {
-	ClientSecret      string        `env:"SLACK_CLIENT_SECRET,required"`
+	OauthToken        string        `env:"SLACK_OAUTH_TOKEN,required"`
 	MaxCacheEntryTime time.Duration `env:"SLACK_STORE_MAX_CACHE_ENTRY_TIME" envDefault:"144h"` // 6 days
 	SlackAPIUrl       string        `env:"SLACK_API_URL"`                                      // only for testing
 }
@@ -47,7 +47,7 @@ func New(cfg Config) *SlackStorage {
 		slackOptions = append(slackOptions, slack.OptionAPIURL(cfg.SlackAPIUrl))
 	}
 	return &SlackStorage{
-		client:            slack.New(cfg.ClientSecret, slackOptions...),
+		client:            slack.New(cfg.OauthToken, slackOptions...),
 		maxCacheEntryTime: cfg.MaxCacheEntryTime,
 		cache:             make(map[string]cacheEntry),
 	}

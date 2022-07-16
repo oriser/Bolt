@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	SigninSecret              string   `env:"SLACK_SIGNIN_SECRET,required"`
-	ClientSecret              string   `env:"SLACK_CLIENT_SECRET,required"`
+	ClientSecret              string   `env:"SLACK_OAUTH_TOKEN,required"`
 	Port                      uint     `env:"SLACK_SERVER_PORT" envDefault:"8080"`
 	MaxConcurrentLinks        int      `env:"SLACK_MAX_CONCURRENT_LINKS" envDefault:"100"`
 	MaxConcurrentMentions     int      `env:"SLACK_MAX_CONCURRENT_MENTIONS" envDefault:"100"`
