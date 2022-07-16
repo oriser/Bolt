@@ -21,7 +21,7 @@ I provided a deployment for Kubernetes with all the necessary configuration to r
 but you may run it wherever you want as long as it will have a static IP / DNS leading to Bolt.
 
 Here are the basic steps to install Bolt:
-1. Run Bolt server. [See how to run Bolt with Kubernetes](./docs/installation/k8s.md).
-2. Deploy Bolt Slack app. [See detailed instructions here](docs/installation/slack_app.md).
+1. Deploy Bolt Slack app. [See detailed instructions here](docs/installation/slack_app.md).
+2. Run Bolt server. [See how to run Bolt with Kubernetes](./docs/installation/k8s.md).
 3. Invite Bolt to every channel you wish to share Wolt group link in (using `/add` command)
 4. Start sharing Wolt group links
