@@ -1,6 +1,6 @@
 ![bolt](docs/assets/bolt_gh.png)
 
-### Bolt is a Slack bot for Wolt group orders.
+#### Bolt is a Slack bot for Wolt group orders.
 
 ### How does it work?
 As soon as a Wolt group link is sent to a channel it is part of, 
