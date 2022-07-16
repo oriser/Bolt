@@ -1,7 +1,7 @@
-#Run using Kubernetes
+# Run using Kubernetes
 If you have a kubernetes cluster, it's very easy to get Bolt up and running.
 It doesn't matter where the cluster is running as long as you have the prerequisites and enough permissions on the cluster. 
-###Prerequisites
+### Prerequisites
 * A Kubernetes cluster and configured `kubectl`
 * An external static IP address
 * Slack signin secret
@@ -12,7 +12,7 @@ Make sure you created Slack app and you have Slack OAuth Token and Signin Secret
 
 ## Running Bolt
  
-###Configuration
+### Configuration
 You will need at least one Slack user that will be configured as Bolt's admin.
 Bolt's admin can map between wolt-user to its slack user in case Bolt could not do it by itself (using `/add-user` slash command).
 

@@ -1,5 +1,5 @@
 # Creating a Slack app
-###Prerequisites
+### Prerequisites
 * An external static IP address or DNS leading to Bolt
 
 _If you don't have the listed prerequisites, you can see [how to create it in GCP](./k8s_gcp.md)._
