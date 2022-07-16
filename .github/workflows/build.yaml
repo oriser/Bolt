@@ -4,7 +4,6 @@ on:
     workflows: ["Go"]
     types:
       - completed
-  push: []
 jobs:
   docker:
     runs-on: ubuntu-latest
