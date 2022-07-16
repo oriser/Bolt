@@ -12,5 +12,5 @@ It will even keep reminding the participants to pay until they've marked themsel
 ## Features
 * Automatic detection of Wolt group links shared to a Slack channel
 * Automatic monitoring over participants' ordered items and sending how much each participant has to pay, including delivery rate
-* It will try to automatically match the Wolt user to a Slack user and tag the relevant user, in case no matching Slack user found, an admin can add a custom user with `/add-user` command
+* It will try to automatically match the Wolt user to a Slack user and tag the relevant user, in case no matching Slack user is found, an admin can add a custom user with `/add-user` command
 * Per-order debts reminders 
