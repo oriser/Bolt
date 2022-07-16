@@ -1,9 +1,12 @@
 name: Build And Push
 on:
   workflow_run:
-    workflows: ["Go"]
+    workflows:
+      - Go
     types:
       - completed
+    branches:
+      - '*'
 jobs:
   docker:
     runs-on: ubuntu-latest
