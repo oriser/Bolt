@@ -2,7 +2,7 @@
 ### Prerequisites
 * An external static IP address or DNS leading to Bolt
 
-_If you don't have the listed prerequisites, you can see [how to create it in GCP](./k8s_gcp.md)._
+_If you don't have the listed prerequisites, you can see [how to create it in GCP](./k8s_gcp.md#create-a-static-external-ip)._
 
 1. Go to [Slack Apps Dashboard](https://api.slack.com/apps)
 2. Click `Create New App`
@@ -13,7 +13,7 @@ and replace each occurrence of `<static_ip>` with the static IP / DNS leading to
 6. Click `Next` and then `Create`
 7. Click `Install To Workspace` and then `Allow` when asking for permissions (If you are not managing the workspace you may need an admin approval)
 8. Copy the `Signin Secret` and save aside
-9. Got to `Install App` section and copy the `OAuth Token` and save aside
+9. Go to `Install App` section and copy the `OAuth Token` and save aside
 10. Now, you can configure the `SLACK_OAUTH_TOKEN` and `SLACK_SIGNIN_SECRET` for Bolt.
 11. After Bolt is running, go to `Event Subscriptions` and click `Retry` for the _Request URL_
 12. If all went well, the verification should work, click `Save Changes`
