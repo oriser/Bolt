@@ -6,12 +6,7 @@ _If you don't have the listed prerequisites, you can see [how to create it in GC
 
 1. Go to [Slack Apps Dashboard](https://api.slack.com/apps)
 2. Click `Create New App`
-3. Choose `From an app manifest`
-<details><summary>CLICK ME</summary>
-<p>
-![bolt](../assets/slack/3_create.png)
-</p>
-</details>
+3. Choose [`From an app manifest`](../assets/slack/3_create.png)
 4. Select the workspace where you want to deploy the app
 5. Copy the content of the [app manifest](../../deploy/app_manifest.yaml) 
 and replace each occurrence of `<static_ip>` with the static IP / DNS leading to Bolt.
