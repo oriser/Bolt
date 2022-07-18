@@ -25,3 +25,17 @@ Here are the basic steps to install Bolt:
 2. Run Bolt server. [See how to run Bolt with Kubernetes](./docs/installation/k8s.md).
 3. Invite Bolt to every channel you wish to share Wolt group link in (using `/add` command)
 4. Start sharing Wolt group links
+
+## How does it look like?
+### Printing order rates and automatic tagging relevant participants
+![example_rate](docs/assets/examples/order_completed.png)
+
+### Debts
+#### A debt reminder sent to a participant
+![example_reminder](docs/assets/examples/debt_reminder.png)
+
+#### When a user mark themselves as paid (by reacting to the rates message)
+##### Message sent to the user
+![example_removed](docs/assets/examples/debt_removed.png)
+##### Message sent to the host
+![example_removed](docs/assets/examples/paid_host.png)
