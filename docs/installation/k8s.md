@@ -4,7 +4,7 @@ It doesn't matter where the cluster is running as long as you have the prerequis
 ### Prerequisites
 * A Kubernetes cluster and configured `kubectl`
 * An external static IP address
-* Slack signin secret
+* Slack signin secret + OAuth secret
 
 _If you don't have a Kubernetes cluster and/or external static IP address, you can see [how to create it in GCP](./k8s_gcp.md)._
 
@@ -16,7 +16,7 @@ Make sure you created a Slack app and you have Slack OAuth Token and Signin Secr
 You will need at least one Slack user that will be configured as Bolt's admin.
 Bolt's admin can map Wolt-users to Slack users if Bolt could not do it itself (using the '/add-user' slash command).
 
-To get the user ID, go to the user's profile, then click on the 3 dots and choose `Copy member ID`
+To get the user ID, go to the user's profile, then click on the 3 dots and choose [`Copy member ID`](../assets/slack/0_copy_member_id.png)
 1. Go to [deployment.yaml](../../deploy/deployment.yaml)
 2. Paste Slack's OAuth token and signin secret **as Base64 encoded** instead of `<slack_oauth_token_base64>` and `<slack_signin_secret_base64>` respectively
 3. Configure `ADMIN_SLACK_USER_IDS` with admin users for Bolt (separated by a comma)

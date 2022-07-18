@@ -14,7 +14,7 @@ and replace each occurrence of `<static_ip>` with the static IP / DNS leading to
 7. Click `Install To Workspace` and then `Allow` when asking for permissions (If you are not managing the workspace you may need an admin approval)
 8. Copy the [`Signin Secret`](../assets/slack/8_creds.png) and save it aside
 9. Go to `Install App` section and copy the [`OAuth Token`](../assets/slack/9_token.png) and save it aside
-10. Now, you can configure `SLACK_OAUTH_TOKEN` and `SLACK_SIGNIN_SECRET` for Bolt.
+10. Now, you can configure `SLACK_OAUTH_TOKEN` and `SLACK_SIGNIN_SECRET` for Bolt and run it. [See here how to run it using Kubernetes](k8s.md).
 11. After Bolt is running, go to [`Event Subscriptions`](../assets/slack/11_verify.png) and click `Retry` for the _Request URL_
 12. If all went well, the [verification should work](../assets/slack/12_verified.png), click `Save Changes`
 13. [Invite Bolt](../assets/slack/13_add.png) to any channel you want him to join to Wolt food links (use `/add` Slack command)
