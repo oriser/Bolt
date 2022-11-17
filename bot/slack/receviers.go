@@ -149,6 +149,12 @@ func (s *SlackBot) mentionsWorker(ctx context.Context) {
 }
 
 func (s *SlackBot) handleLink(linkEvent *slackevents.LinkSharedEvent) error {
+	if linkEvent.Channel == "COMPOSER" {
+		// COMPOSER link are the unfurl link event sent when the link is unfurled in the client.
+		// This is not interesting for us as the link didn't send yet and we don't have a valid channel.
+		return nil
+	}
+
 	links := make([]service.Link, len(linkEvent.Links))
 	for i, l := range linkEvent.Links {
 		links[i] = service.Link{
