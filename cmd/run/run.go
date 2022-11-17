@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -22,13 +23,18 @@ type Config struct {
 	DBLocation string `env:"DB_LOCATION" envDefault:"/var/sqlite/store.db"`
 }
 
+func (c Config) String() string {
+	res, _ := json.Marshal(&c)
+	return string(res)
+}
+
 func Run() error {
 	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {
 		return fmt.Errorf("parsing config: %w", err)
 	}
 
-	log.Printf("Starting with options: %+v\n", cfg)
+	log.Printf("Starting with options: %s\n", cfg.String())
 
 	slackClient := slack2.NewClient(cfg.Bot)
 	id, err := slackClient.GetSelfID()

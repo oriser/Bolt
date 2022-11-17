@@ -19,7 +19,7 @@ const (
 )
 
 type Config struct {
-	OauthToken        string        `env:"SLACK_OAUTH_TOKEN,required"`
+	OauthToken        string        `env:"SLACK_OAUTH_TOKEN,required" json:"-"`
 	MaxCacheEntryTime time.Duration `env:"SLACK_STORE_MAX_CACHE_ENTRY_TIME" envDefault:"144h"` // 6 days
 	SlackAPIUrl       string        `env:"SLACK_API_URL"`                                      // only for testing
 }
