@@ -23,7 +23,7 @@ type Config struct {
 	DBLocation string `env:"DB_LOCATION" envDefault:"/var/sqlite/store.db"`
 }
 
-func (c *Config) String() string {
+func (c Config) String() string {
 	res, _ := json.Marshal(&c)
 	return string(res)
 }
