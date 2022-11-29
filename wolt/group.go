@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Jeffail/gabs/v2"
+	"github.com/hashicorp/go-retryablehttp"
 	"golang.org/x/net/html"
 )
 
@@ -53,9 +54,9 @@ func newGroup(woltAddrs WoltAddr, id string) (*Group, error) {
 		return nil, fmt.Errorf("cookiejar: %w", err)
 	}
 
-	client := &http.Client{
-		Jar: jar,
-	}
+	client := retryablehttp.NewClient()
+	client.HTTPClient.Jar = jar
+	client.Logger = nil
 
 	if err = woltAddrs.parse(); err != nil {
 		return nil, fmt.Errorf("parse wolt addrs: %w", err)
@@ -64,7 +65,7 @@ func newGroup(woltAddrs WoltAddr, id string) (*Group, error) {
 	return &Group{
 		woltAddrs: woltAddrs,
 		prettyID:  id,
-		client:    client,
+		client:    client.StandardClient(),
 		headers: map[string]string{
 			"User-Agent":   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.16; rv:84.0) Gecko/20100101 Firefox/84.0",
 			"Origin":       woltAddrs.BaseAddr,
