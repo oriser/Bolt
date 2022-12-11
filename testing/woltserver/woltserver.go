@@ -2,9 +2,12 @@ package woltserver
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -20,9 +23,12 @@ type WoltServer struct {
 	orders       map[string]*Order // ID to order
 	shortIDOrder map[string]string // Order short ID to ID
 	venues       map[string]*Venue
+	t            *testing.T
 }
 
-func NewWoltServer() *WoltServer {
+func NewWoltServer(t *testing.T) *WoltServer {
+	rand.Seed(time.Now().UnixNano()) // For random 50x http errors
+
 	router := mux.NewRouter()
 	server := httptest.NewUnstartedServer(router)
 
@@ -32,6 +38,7 @@ func NewWoltServer() *WoltServer {
 		orders:       make(map[string]*Order),
 		shortIDOrder: make(map[string]string),
 		venues:       make(map[string]*Venue),
+		t:            t,
 	}
 	ws.registerDefaults()
 	return ws
@@ -62,7 +69,16 @@ func (ws *WoltServer) Stop() {
 }
 
 func (ws *WoltServer) RegisterEndpoint(pattern string, handler http.HandlerFunc) {
-	ws.router.HandleFunc(pattern, handler)
+	ws.router.HandleFunc(pattern, func(writer http.ResponseWriter, request *http.Request) {
+		if 0 == rand.Intn(7) {
+			// Randomly return some 502 errors to simulate wolt server errors
+			ws.t.Log("Returning 502 error")
+			ws.writeError(writer, http.StatusBadGateway, fmt.Errorf("random error"))
+			return
+		}
+
+		handler.ServeHTTP(writer, request)
+	})
 }
 
 func (ws *WoltServer) GetOrder(orderID string) (*Order, error) {

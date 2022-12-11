@@ -74,7 +74,7 @@ func (h *Service) DebtWorker(ctx context.Context, orderID string) {
 		return
 	}
 
-	reminderInterval := time.NewTicker(h.debtReminderInterval)
+	reminderInterval := time.NewTicker(h.cfg.DebtReminderInterval)
 	defer reminderInterval.Stop()
 
 	for {
@@ -178,7 +178,7 @@ func (h *Service) addDebts(usersMap map[string]*userDomain.User, initiatedTransp
 	}
 
 	//goland:noinspection ALL
-	ctx, _ := context.WithTimeout(context.Background(), h.debtMaximumDuration) // nolint
+	ctx, _ := context.WithTimeout(context.Background(), h.cfg.DebtMaximumDuration) // nolint
 	go h.DebtWorker(ctx, orderID)
 
 	return nil

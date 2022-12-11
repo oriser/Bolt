@@ -218,7 +218,7 @@ func (h *Service) shouldHandleOrder() bool {
 }
 
 func (h *Service) waitForGroupProgress(g *wolt.Group) error {
-	timeoutTime := time.Now().Add(h.timeoutForReady)
+	timeoutTime := time.Now().Add(h.cfg.TimeoutForReady)
 
 	details, err := g.Details()
 	if err != nil {
@@ -233,7 +233,7 @@ func (h *Service) waitForGroupProgress(g *wolt.Group) error {
 		if time.Now().After(timeoutTime) {
 			return fmt.Errorf("timeout waiting for group to progress")
 		}
-		time.Sleep(h.waitBetweenStatusCheck)
+		time.Sleep(h.cfg.WaitBetweenStatusCheck)
 
 		details, err = g.Details()
 		if err != nil {
@@ -277,8 +277,12 @@ func (h *Service) calculateDeliveryRate(g *wolt.Group, details *wolt.OrderDetail
 
 func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRate, error) {
 	g, err := wolt.NewGroupWithExistingID(wolt.WoltAddr{
-		BaseAddr:    h.woltBaseAddr,
-		APIBaseAddr: h.woltApiAddr,
+		BaseAddr:    h.cfg.WoltBaseAddr,
+		APIBaseAddr: h.cfg.WoltApiBaseAddr,
+	}, wolt.RetryConfig{
+		HTTPMaxRetries:       h.cfg.WoltHTTPMaxRetryCount,
+		HTTPMinRetryDuration: h.cfg.WoltHTTPMinRetryDuration,
+		HTTPMaxRetryDuration: h.cfg.WoltHTTPMaxRetryDuration,
 	}, groupID)
 	if err != nil {
 		return GroupRate{}, fmt.Errorf("new existing group: %w", err)
