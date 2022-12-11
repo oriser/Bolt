@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -39,11 +40,15 @@ var (
 )
 
 const (
+	WaitForMessageTimeout  = 20 * time.Second
 	OrderReadyTimeout      = 10 * time.Second
 	WaitBetweenStatusCheck = 500 * time.Millisecond
 	DebtReminderInterval   = 3 * time.Second
 	DebtMaximumDuration    = 10 * time.Second
 	AdminSlackUserID       = "ABC123"
+	MaxHttpAttempts        = 10000 // A lot of attempts to make sure the request will succeed at last (we return 502 randomly for tests)
+	MinHttpRetryWait       = time.Millisecond
+	MaxHttpRetryWait       = 5 * time.Millisecond
 
 	DefaultNonBotUserID     = "W012A3CDE" // From slack test package, it's not exposed, and it's constant
 	MessageChannel          = "some-channel"
@@ -92,6 +97,9 @@ func initEnvs(t *testing.T, tdata testData) {
 	require.NoError(t, os.Setenv("DEBT_MAXIMUM_DURATION", DebtMaximumDuration.String()))
 	require.NoError(t, os.Setenv("WOLT_BASE_ADDR", "http://"+tdata.woltServer.Addr()))
 	require.NoError(t, os.Setenv("WOLT_API_BASE_ADDR", "http://"+tdata.woltServer.Addr()))
+	require.NoError(t, os.Setenv("WOLT_HTTP_MAX_RETRY_COUNT", strconv.Itoa(MaxHttpAttempts)))
+	require.NoError(t, os.Setenv("WOLT_HTTP_MIN_RETRY_DURATION", MinHttpRetryWait.String()))
+	require.NoError(t, os.Setenv("WOLT_HTTP_MAX_RETRY_DURATION", MaxHttpRetryWait.String()))
 
 	// main
 	require.NoError(t, os.Setenv("DB_LOCATION", path.Join(tmpDir, "db.sqlite")))
@@ -99,7 +107,7 @@ func initEnvs(t *testing.T, tdata testData) {
 
 func initTest(t *testing.T) testData {
 	t.Helper()
-	woltServer := woltserver.NewWoltServer()
+	woltServer := woltserver.NewWoltServer(t)
 	t.Log("Starting test wolt server")
 	woltServer.Start()
 
@@ -359,7 +367,7 @@ func validateDebts(t *testing.T,
 			willRemainDebts = append(willRemainDebts, participant)
 			continue
 		}
-		_, err := WaitForOutboundSlackMessage(1*time.Second, tdata.slackServer,
+		_, err := WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 			fmt.Sprintf("Reminder, you should pay %.2f nis to <@%s> for Wolt order ID %s.\n",
 				ratesMap[participant], participantIDsMapping[host], orderID),
 			participantIDsMapping[participant], "", ContainsMatch)
@@ -372,12 +380,12 @@ func validateDebts(t *testing.T,
 		assert.Equal(t, 200, resp.StatusCode)
 
 		// Checking messages sent to user and host
-		_, err = WaitForOutboundSlackMessage(1*time.Second, tdata.slackServer,
+		_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 			fmt.Sprintf("OK! I removed your debt for order %s", orderID),
 			participantIDsMapping[participant], "", EqualMatch)
 		require.NoError(t, err)
 
-		_, err = WaitForOutboundSlackMessage(1*time.Second, tdata.slackServer,
+		_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 			fmt.Sprintf("<@%s> marked himself as paid for order ID %s", participantIDsMapping[participant], orderID),
 			participantIDsMapping[host], "", EqualMatch)
 		require.NoError(t, err)
@@ -391,7 +399,7 @@ func validateDebts(t *testing.T,
 	t.Log("Waiting until debt timeout will reach")
 	time.Sleep(DebtMaximumDuration - 2*DebtReminderInterval)
 	if len(willRemainDebts) > 0 {
-		_, err := WaitForOutboundSlackMessage(1*time.Second, tdata.slackServer,
+		_, err := WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 			fmt.Sprintf("I removed all debts for order ID %s because timeout has been reached", orderID),
 			participantIDsMapping[host], "", EqualMatch)
 		require.NoError(t, err)
@@ -409,7 +417,7 @@ func cancelDebts(t *testing.T,
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	_, err = WaitForOutboundSlackMessage(1*time.Second, tdata.slackServer,
+	_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 		fmt.Sprintf("I removed all debts for order ID %s because the host requested to cancel debts tracking", orderID),
 		hostUser, "", EqualMatch)
 	require.NoError(t, err)
@@ -633,7 +641,7 @@ func TestSlackPurchaseGroup(t *testing.T) {
 			assert.Equal(t, 200, resp.StatusCode)
 
 			// Verifying joined message
-			_, err = WaitForOutboundSlackMessage(2*time.Second, tdata.slackServer, fmt.Sprintf(HelloPattern, orderShortID),
+			_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer, fmt.Sprintf(HelloPattern, orderShortID),
 				MessageChannel, timestamp, EqualMatch)
 			require.NoError(t, err)
 
@@ -669,7 +677,7 @@ func TestSlackPurchaseGroup(t *testing.T) {
 
 			// Validating the rates message
 			rates, ratesMessage := buildRatesMessage(t, order, expectedDelivery, participantIDsMapping)
-			msg, err := WaitForOutboundSlackMessage(3*time.Second, tdata.slackServer,
+			msg, err := WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 				fmt.Sprintf("Rates for Wolt order ID %s", orderShortID),
 				MessageChannel, timestamp, ContainsMatch)
 			require.NoError(t, err)
@@ -685,14 +693,14 @@ func TestSlackPurchaseGroup(t *testing.T) {
 
 			if !tc.addHostToSlack {
 				// No debts mode
-				_, err = WaitForOutboundSlackMessage(2*time.Second, tdata.slackServer,
+				_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 					fmt.Sprintf("I didn't find the user of the host (%s), I won't track debts for order %s", order.Host, orderShortID),
 					MessageChannel, timestamp, EqualMatch)
 				assert.NoError(t, err)
 			} else {
 				// Debt mode
 				// First, verifying debts message
-				_, err = WaitForOutboundSlackMessage(2*time.Second, tdata.slackServer,
+				_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 					fmt.Sprintf("<@%s>, as the host, you can react with :x: to the rates message to cancel debts tracking for Wolt order ID %s",
 						participantIDsMapping[order.Host], orderShortID),
 					MessageChannel, timestamp, ContainsMatch)
@@ -703,7 +711,7 @@ func TestSlackPurchaseGroup(t *testing.T) {
 						// participant should exist and no "not found" message should be sent
 						continue
 					}
-					_, err = WaitForOutboundSlackMessage(2*time.Second, tdata.slackServer,
+					_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer,
 						fmt.Sprintf("I won't track %q payment because I can't find his user.", participant),
 						MessageChannel, timestamp, EqualMatch)
 					assert.NoError(t, err)

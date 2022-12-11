@@ -10,9 +10,11 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/Jeffail/gabs/v2"
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/prometheus/common/log"
 	"golang.org/x/net/html"
 )
 
@@ -22,6 +24,12 @@ type WoltAddr struct {
 
 	baseAddrParsed *url.URL
 	apiAddrParsed  *url.URL
+}
+
+type RetryConfig struct {
+	HTTPMaxRetries       int
+	HTTPMinRetryDuration time.Duration
+	HTTPMaxRetryDuration time.Duration
 }
 
 func (w *WoltAddr) parse() error {
@@ -48,7 +56,7 @@ type Group struct {
 	headers   map[string]string
 }
 
-func newGroup(woltAddrs WoltAddr, id string) (*Group, error) {
+func newGroup(woltAddrs WoltAddr, retryConfig RetryConfig, id string) (*Group, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, fmt.Errorf("cookiejar: %w", err)
@@ -56,7 +64,15 @@ func newGroup(woltAddrs WoltAddr, id string) (*Group, error) {
 
 	client := retryablehttp.NewClient()
 	client.HTTPClient.Jar = jar
+	client.RetryWaitMax = retryConfig.HTTPMaxRetryDuration
+	client.RetryWaitMin = retryConfig.HTTPMinRetryDuration
+	client.RetryMax = retryConfig.HTTPMaxRetries
 	client.Logger = nil
+	client.RequestLogHook = func(logger retryablehttp.Logger, request *http.Request, i int) {
+		if i != 0 {
+			log.Errorf("Retrying request for %s (attempt %d)", request.URL.String(), i)
+		}
+	}
 
 	if err = woltAddrs.parse(); err != nil {
 		return nil, fmt.Errorf("parse wolt addrs: %w", err)
@@ -73,8 +89,8 @@ func newGroup(woltAddrs WoltAddr, id string) (*Group, error) {
 		}}, nil
 }
 
-func NewGroupWithExistingID(woltAddrs WoltAddr, id string) (*Group, error) {
-	return newGroup(woltAddrs, id)
+func NewGroupWithExistingID(woltAddrs WoltAddr, retryConfig RetryConfig, id string) (*Group, error) {
+	return newGroup(woltAddrs, retryConfig, id)
 }
 
 func isIDMatch(n *html.Node, id string) bool {
@@ -164,6 +180,19 @@ func (g *Group) prepareReq(method, url string, body io.Reader, extraHeaders map[
 	return req, nil
 }
 
+func (g *Group) sendReq(req *http.Request) (*http.Response, error) {
+	resp, err := g.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("sending https req: %w", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("got non 200 response: %d", resp.StatusCode)
+	}
+
+	return resp, nil
+}
+
 func (g *Group) joinByRealID() error {
 	body := bytes.NewBuffer([]byte(`{"first_name":"Wolt Bot"}`))
 
@@ -181,13 +210,9 @@ func (g *Group) joinByRealID() error {
 		return fmt.Errorf("new request: %w", err)
 	}
 
-	resp, err := g.client.Do(req)
+	_, err = g.sendReq(req)
 	if err != nil {
 		return fmt.Errorf("join request http res: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("got non 200 response: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -199,7 +224,7 @@ func (g *Group) Join() error {
 		return fmt.Errorf("new request: %w", err)
 	}
 
-	resp, err := g.client.Do(req)
+	resp, err := g.sendReq(req)
 	if err != nil {
 		return fmt.Errorf("getting http response: %w", err)
 	}
@@ -223,7 +248,7 @@ func (g *Group) Details() (*OrderDetails, error) {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	resp, err := g.client.Do(req)
+	resp, err := g.sendReq(req)
 	if err != nil {
 		return nil, fmt.Errorf("details http res: %w", err)
 	}
@@ -257,13 +282,9 @@ func (g *Group) VenueDetails() (*VenueDetails, error) {
 		return nil, fmt.Errorf("prepare venue request: %w", err)
 	}
 
-	resp, err := g.client.Do(req)
+	resp, err := g.sendReq(req)
 	if err != nil {
 		return nil, fmt.Errorf("send venue details request: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("status code is not 200. Response: %+v", resp)
 	}
 
 	output, err := ioutil.ReadAll(resp.Body)
@@ -291,13 +312,9 @@ func (g *Group) MarkAsReady() error {
 		return fmt.Errorf("new request: %w", err)
 	}
 
-	resp, err := g.client.Do(req)
+	_, err = g.sendReq(req)
 	if err != nil {
 		return fmt.Errorf("mark as ready http res: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("status is not 200. Response: %+v", resp)
 	}
 
 	return nil

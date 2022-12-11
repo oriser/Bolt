@@ -55,7 +55,6 @@ func (ws *WoltServer) joinByShortIDHandler(res http.ResponseWriter, req *http.Re
 		ws.writeError(res, http.StatusInternalServerError, err)
 		return
 	}
-	res.WriteHeader(http.StatusOK)
 }
 
 func (ws *WoltServer) joinByIDHandler(res http.ResponseWriter, req *http.Request) {
@@ -91,7 +90,6 @@ func (ws *WoltServer) orderDetailsHandler(res http.ResponseWriter, req *http.Req
 		ws.writeError(res, http.StatusInternalServerError, err)
 		return
 	}
-	res.WriteHeader(http.StatusOK)
 }
 
 func (ws *WoltServer) getVenueHandler(res http.ResponseWriter, req *http.Request) {
@@ -112,5 +110,4 @@ func (ws *WoltServer) getVenueHandler(res http.ResponseWriter, req *http.Request
 		ws.writeError(res, http.StatusInternalServerError, err)
 		return
 	}
-	res.WriteHeader(http.StatusOK)
 }
