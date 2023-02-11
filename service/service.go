@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -84,4 +85,23 @@ func New(cfg Config, userStore user.Store, debtStore debt.Store, selfID string, 
 		dontJoinAfter:     dontJoinAfter,
 		dontJoinAfterTZ:   dontJoinAfterTZ,
 	}, nil
+}
+
+func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) {
+	if h.eventNotification == nil {
+		return
+	}
+
+	messageID, err := h.eventNotification.SendMessage(receiver, event, initialMessageID)
+	if err != nil {
+		log.Printf("Error informing event to receiver %q: %v\n", receiver, err)
+		return
+	}
+
+	if reactionEmoji == "" {
+		return
+	}
+	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
+		log.Printf("Error adding reaction to message ID %s:%v\n", messageID, err)
+	}
 }

@@ -44,6 +44,15 @@ type groupOrder struct {
 	rates   GroupRate
 }
 
+func getSortedKeys(m map[string]float64) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 	// handle just one link in a message
 	groupID := h.getWoltGroupID(req.Links)
@@ -104,40 +113,12 @@ func (h *Service) getWoltGroupID(links []Link) *ParsedWoltGroupID {
 	return nil
 }
 
-func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) {
-	if h.eventNotification == nil {
-		return
-	}
-
-	messageID, err := h.eventNotification.SendMessage(receiver, event, initialMessageID)
-	if err != nil {
-		log.Printf("Error informing event to receiver %q: %v\n", receiver, err)
-		return
-	}
-
-	if reactionEmoji == "" {
-		return
-	}
-	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
-		log.Printf("Error adding reaction to message ID %s:%v\n", messageID, err)
-	}
-}
-
-func (h *Service) getSortedKeys(m map[string]float64) []string {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
 func (h *Service) buildGroupRates(woltRates map[string]float64, host string, deliveryRate int) GroupRate {
 	if _, ok := woltRates[host]; !ok {
 		// The host didn't take anything, so he won't be included in the rates, add it here just to fetch his user
 		woltRates[host] = 0.0
 	}
-	sortedKeys := h.getSortedKeys(woltRates)
+	sortedKeys := getSortedKeys(woltRates)
 	groupRate := GroupRate{
 		Rates:        make([]Rate, len(woltRates)),
 		HostWoltUser: host,
