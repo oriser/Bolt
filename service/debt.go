@@ -143,7 +143,7 @@ func (h *Service) createDebt(amount float64, initiatedTransport, orderID, messag
 	return nil
 }
 
-func (h *Service) addDebts(initiatedTransport, orderID string, rates GroupRate2, messageID string) error {
+func (h *Service) addDebts(initiatedTransport, orderID string, rates GroupRate, messageID string) error {
 	if h.debtStore == nil {
 		return nil
 	}

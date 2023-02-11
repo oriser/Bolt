@@ -32,33 +32,10 @@ type Rate struct {
 }
 
 type GroupRate struct {
-	Rates        map[string]float64
-	Host         string
-	DeliveryRate int
-}
-
-type GroupRate2 struct {
 	Rates        []Rate
 	HostWoltUser string
 	HostUser     *userDomain.User
 	DeliveryRate int
-}
-
-func (g *GroupRate) OrderedRates() []Rate {
-	keys := make([]string, 0, len(g.Rates))
-	for key := range g.Rates {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	rates := make([]Rate, len(g.Rates))
-	for i, key := range keys {
-		rates[i] = Rate{
-			WoltName: key,
-			Amount:   g.Rates[key],
-		}
-	}
-	return rates
 }
 
 type groupOrder struct {
@@ -155,13 +132,13 @@ func (h *Service) getSortedKeys(m map[string]float64) []string {
 	return keys
 }
 
-func (h *Service) buildGroupRates(woltRates map[string]float64, host string, deliveryRate int) GroupRate2 {
+func (h *Service) buildGroupRates(woltRates map[string]float64, host string, deliveryRate int) GroupRate {
 	if _, ok := woltRates[host]; !ok {
 		// The host didn't take anything, so he won't be included in the rates, add it here just to fetch his user
 		woltRates[host] = 0.0
 	}
 	sortedKeys := h.getSortedKeys(woltRates)
-	groupRate := GroupRate2{
+	groupRate := GroupRate{
 		Rates:        make([]Rate, len(woltRates)),
 		HostWoltUser: host,
 		DeliveryRate: deliveryRate,
@@ -196,7 +173,7 @@ func (h *Service) buildGroupRates(woltRates map[string]float64, host string, del
 	return groupRate
 }
 
-func (h *Service) buildRatesMessage(groupRate GroupRate2, groupID string) string {
+func (h *Service) buildRatesMessage(groupRate GroupRate, groupID string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Rates for Wolt order ID %s (including %d NIS for delivery):\n", groupID, groupRate.DeliveryRate))
 
@@ -304,7 +281,7 @@ func (h *Service) calculateDeliveryRate(g *wolt.Group, details *wolt.OrderDetail
 	return deliveryPrice, nil
 }
 
-func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRate2, error) {
+func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRate, error) {
 	g, err := wolt.NewGroupWithExistingID(wolt.WoltAddr{
 		BaseAddr:    h.cfg.WoltBaseAddr,
 		APIBaseAddr: h.cfg.WoltApiBaseAddr,
@@ -314,35 +291,35 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRat
 		HTTPMaxRetryDuration: h.cfg.WoltHTTPMaxRetryDuration,
 	}, groupID)
 	if err != nil {
-		return GroupRate2{}, fmt.Errorf("new existing group: %w", err)
+		return GroupRate{}, fmt.Errorf("new existing group: %w", err)
 	}
 
 	if err := g.Join(); err != nil {
-		return GroupRate2{}, fmt.Errorf("join group: %w", err)
+		return GroupRate{}, fmt.Errorf("join group: %w", err)
 	}
 
 	h.informEvent(receiver, fmt.Sprintf("Hey :) Just letting you know I joined the group %s", groupID), "", messageID)
 
 	if err := g.MarkAsReady(); err != nil {
-		return GroupRate2{}, fmt.Errorf("mark as ready in group: %w", err)
+		return GroupRate{}, fmt.Errorf("mark as ready in group: %w", err)
 	}
 
 	if err := h.waitForGroupProgress(g); err != nil {
-		return GroupRate2{}, fmt.Errorf("wait for group to progress: %w", err)
+		return GroupRate{}, fmt.Errorf("wait for group to progress: %w", err)
 	}
 
 	details, err := g.Details()
 	if err != nil {
-		return GroupRate2{}, fmt.Errorf("get group details for calculating delivery: %w", err)
+		return GroupRate{}, fmt.Errorf("get group details for calculating delivery: %w", err)
 	}
 
 	rates, err := details.RateByPerson()
 	if err != nil {
-		return GroupRate2{}, fmt.Errorf("rate by person: %w", err)
+		return GroupRate{}, fmt.Errorf("rate by person: %w", err)
 	}
 	host, err := details.Host()
 	if err != nil {
-		return GroupRate2{}, fmt.Errorf("group host: %w", err)
+		return GroupRate{}, fmt.Errorf("group host: %w", err)
 	}
 
 	deliveryRate, err := h.calculateDeliveryRate(g, details)
