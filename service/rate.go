@@ -10,7 +10,6 @@ import (
 	"time"
 
 	userDomain "github.com/oriser/bolt/user"
-	"github.com/oriser/bolt/wolt"
 	"github.com/oriser/regroup"
 )
 
@@ -36,12 +35,6 @@ type GroupRate struct {
 	HostWoltUser string
 	HostUser     *userDomain.User
 	DeliveryRate int
-}
-
-type groupOrder struct {
-	details wolt.OrderDetails
-	venue   wolt.VenueDetails
-	rates   GroupRate
 }
 
 func getSortedKeys(m map[string]float64) []string {
@@ -204,94 +197,26 @@ func (h *Service) shouldHandleOrder() bool {
 	return true
 }
 
-func (h *Service) waitForGroupProgress(g *wolt.Group) error {
-	timeoutTime := time.Now().Add(h.cfg.TimeoutForReady)
-
-	details, err := g.Details()
-	if err != nil {
-		return fmt.Errorf("get group details: %w", err)
-	}
-	status, err := details.Status()
-	if err != nil {
-		return fmt.Errorf("get status from details: %w", err)
-	}
-
-	for status == wolt.StatusActive {
-		if time.Now().After(timeoutTime) {
-			return fmt.Errorf("timeout waiting for group to progress")
-		}
-		time.Sleep(h.cfg.WaitBetweenStatusCheck)
-
-		details, err = g.Details()
-		if err != nil {
-			return fmt.Errorf("get group details: %w", err)
-		}
-		status, err = details.Status()
-		if err != nil {
-			return fmt.Errorf("get status from details: %w", err)
-		}
-	}
-
-	if status == wolt.StatusCanceled {
-		return fmt.Errorf("order canceled")
-	}
-
-	if status != wolt.StatusPendingTrans && status != wolt.StatusPurchased {
-		return fmt.Errorf("unknown order status: %s", status)
-	}
-
-	return nil
-}
-
-func (h *Service) calculateDeliveryRate(g *wolt.Group, details *wolt.OrderDetails) (int, error) {
-	venueDetails, err := g.VenueDetails()
-	if err != nil {
-		return 0, fmt.Errorf("get venue details: %w", err)
-	}
-
-	deliveryCoordinate, err := details.DeliveryCoordinate()
-	if err != nil {
-		return 0, fmt.Errorf("get delivery coordinate: %w", err)
-	}
-
-	deliveryPrice, err := venueDetails.CalculateDeliveryRate(deliveryCoordinate)
-	if err != nil {
-		return 0, fmt.Errorf("get delivery price: %w", err)
-	}
-
-	return deliveryPrice, nil
-}
-
 func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRate, error) {
-	g, err := wolt.NewGroupWithExistingID(wolt.WoltAddr{
-		BaseAddr:    h.cfg.WoltBaseAddr,
-		APIBaseAddr: h.cfg.WoltApiBaseAddr,
-	}, wolt.RetryConfig{
-		HTTPMaxRetries:       h.cfg.WoltHTTPMaxRetryCount,
-		HTTPMinRetryDuration: h.cfg.WoltHTTPMinRetryDuration,
-		HTTPMaxRetryDuration: h.cfg.WoltHTTPMaxRetryDuration,
-	}, groupID)
+	order, err := h.joinGroupOrder(groupID)
 	if err != nil {
-		return GroupRate{}, fmt.Errorf("new existing group: %w", err)
+		return GroupRate{}, fmt.Errorf("join group order: %w", err)
 	}
-
-	if err := g.Join(); err != nil {
-		return GroupRate{}, fmt.Errorf("join group: %w", err)
-	}
-
 	h.informEvent(receiver, fmt.Sprintf("Hey :) Just letting you know I joined the group %s", groupID), "", messageID)
 
-	if err := g.MarkAsReady(); err != nil {
+	if err = order.MarkAsReady(); err != nil {
 		return GroupRate{}, fmt.Errorf("mark as ready in group: %w", err)
 	}
 
-	if err := h.waitForGroupProgress(g); err != nil {
-		return GroupRate{}, fmt.Errorf("wait for group to progress: %w", err)
+	ctx, cancel := context.WithTimeout(context.Background(), h.cfg.TimeoutForReady)
+	defer cancel()
+	if err = order.WaitUntilFinished(ctx, h.cfg.WaitBetweenStatusCheck); err != nil {
+		return GroupRate{}, fmt.Errorf("wait for group to finish: %w", err)
 	}
 
-	details, err := g.Details()
+	details, err := order.Details()
 	if err != nil {
-		return GroupRate{}, fmt.Errorf("get group details for calculating delivery: %w", err)
+		return GroupRate{}, fmt.Errorf("get group details for calculating rates: %w", err)
 	}
 
 	rates, err := details.RateByPerson()
@@ -303,7 +228,7 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRat
 		return GroupRate{}, fmt.Errorf("group host: %w", err)
 	}
 
-	deliveryRate, err := h.calculateDeliveryRate(g, details)
+	deliveryRate, err := order.CalculateDeliveryRate()
 	if err != nil {
 		h.informEvent(receiver, "I can't find the delivery rate, I'll publish the rates without including the delivery rate", "", messageID)
 		log.Println("Error getting delivery rate:", err)
