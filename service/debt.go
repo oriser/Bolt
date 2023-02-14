@@ -136,7 +136,7 @@ func (h *Service) createDebt(amount float64, initiatedTransport, orderID, messag
 	}
 
 	debt := debtDomain.NewDebt(borrowerUser.ID, lenderUser.ID, orderID, initiatedTransport, messageID, amount)
-	if err := h.debtStore.AdDebt(debt); err != nil {
+	if err := h.debtStore.AddDebt(debt); err != nil {
 		return fmt.Errorf("add debt: %w", err)
 	}
 

@@ -10,7 +10,7 @@ import (
 	"github.com/oriser/bolt/debt"
 )
 
-func (d *DBStore) AdDebt(debt *debt.Debt) error {
+func (d *DBStore) AddDebt(debt *debt.Debt) error {
 	if debt == nil {
 		return fmt.Errorf("nil debt")
 	}

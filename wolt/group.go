@@ -263,7 +263,7 @@ func (g *Group) Details() (*OrderDetails, error) {
 		return nil, fmt.Errorf("parse is active JSON (%s): %w", string(output), err)
 	}
 
-	return &OrderDetails{ParsedOutput: gc}, nil
+	return NewOrderDetails(gc)
 }
 
 func (g *Group) VenueDetails() (*VenueDetails, error) {
@@ -272,12 +272,7 @@ func (g *Group) VenueDetails() (*VenueDetails, error) {
 		return nil, fmt.Errorf("get group details: %w", err)
 	}
 
-	venueID, err := details.VenueID()
-	if err != nil {
-		return nil, fmt.Errorf("get venue ID from details: %w", err)
-	}
-
-	req, err := g.prepareReq("GET", g.joinApiAddr(fmt.Sprintf("/v3/venues/%s", venueID)), nil, nil)
+	req, err := g.prepareReq("GET", g.joinApiAddr(fmt.Sprintf("/v3/venues/%s", details.VenueID)), nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("prepare venue request: %w", err)
 	}

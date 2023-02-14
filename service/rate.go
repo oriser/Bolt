@@ -223,21 +223,17 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRat
 	if err != nil {
 		return GroupRate{}, fmt.Errorf("rate by person: %w", err)
 	}
-	host, err := details.Host()
-	if err != nil {
-		return GroupRate{}, fmt.Errorf("group host: %w", err)
-	}
 
 	deliveryRate, err := order.CalculateDeliveryRate()
 	if err != nil {
 		h.informEvent(receiver, "I can't find the delivery rate, I'll publish the rates without including the delivery rate", "", messageID)
 		log.Println("Error getting delivery rate:", err)
-		return h.buildGroupRates(rates, host, 0), nil
+		return h.buildGroupRates(rates, details.Host, 0), nil
 	}
 
 	pricePerPerson := float64(deliveryRate) / float64(len(rates))
 	for person, rate := range rates {
 		rates[person] = rate + pricePerPerson
 	}
-	return h.buildGroupRates(rates, host, deliveryRate), nil
+	return h.buildGroupRates(rates, details.Host, deliveryRate), nil
 }

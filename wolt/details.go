@@ -8,6 +8,10 @@ import (
 
 type OrderDetails struct {
 	ParsedOutput *gabs.Container
+	Status string
+	VenueID string
+	DeliveryCoordinate Coordinate
+	Host string
 }
 
 const (
@@ -19,7 +23,34 @@ const (
 
 const DeliveryCoordinatesPath = "details.delivery_info.location.coordinates.coordinates"
 
-func (o *OrderDetails) Status() (string, error) {
+func NewOrderDetails(parsedOutput *gabs.Container) (*OrderDetails, error) {
+	o := &OrderDetails{ParsedOutput: parsedOutput}
+	var err error
+
+	o.Status, err = o.status()
+	if err != nil {
+		return nil, fmt.Errorf("get status: %w", err)
+	}
+
+	o.VenueID, err = o.venueID()
+	if err != nil {
+		return nil, fmt.Errorf("get venue ID: %w", err)
+	}
+
+	o.DeliveryCoordinate, err = o.deliveryCoordinate()
+	if err != nil {
+		return nil, fmt.Errorf("get delivery coordinate: %w", err)
+	}
+
+	o.Host, err = o.host()
+	if err != nil {
+		return nil, fmt.Errorf("get host: %w", err)
+	}
+
+	return o, nil
+}
+
+func (o *OrderDetails) status() (string, error) {
 	if !o.ParsedOutput.Exists("status") {
 		return "", fmt.Errorf("'status' key not found in output json")
 	}
@@ -27,14 +58,14 @@ func (o *OrderDetails) Status() (string, error) {
 	return o.ParsedOutput.S("status").Data().(string), nil
 }
 
-func (o *OrderDetails) VenueID() (string, error) {
+func (o *OrderDetails) venueID() (string, error) {
 	if !o.ParsedOutput.Exists("details", "venue_id") {
 		return "", fmt.Errorf("'details.venue_id' key not found in output json")
 	}
 	return o.ParsedOutput.S("details", "venue_id").Data().(string), nil
 }
 
-func (o *OrderDetails) DeliveryCoordinate() (Coordinate, error) {
+func (o *OrderDetails) deliveryCoordinate() (Coordinate, error) {
 	if !o.ParsedOutput.ExistsP(DeliveryCoordinatesPath) {
 		return Coordinate{}, fmt.Errorf("%q key not found in output json", DeliveryCoordinatesPath)
 	}
@@ -42,7 +73,7 @@ func (o *OrderDetails) DeliveryCoordinate() (Coordinate, error) {
 	return CoordinateFromArray(o.ParsedOutput.Path(DeliveryCoordinatesPath))
 }
 
-func (o *OrderDetails) Host() (string, error) {
+func (o *OrderDetails) host() (string, error) {
 	if !o.ParsedOutput.Exists("participants") {
 		return "", fmt.Errorf("no participants")
 	}

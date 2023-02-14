@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/oriser/bolt/order"
 	"github.com/oriser/bolt/wolt"
 )
 
@@ -69,33 +70,24 @@ func (g *groupOrder) WaitUntilFinished(ctx context.Context, waitBetweenStatusChe
 		return fmt.Errorf("get group details: %w", err)
 	}
 
-	status, err := details.Status()
-	if err != nil {
-		return fmt.Errorf("get status from details: %w", err)
-	}
-
-	for status == wolt.StatusActive {
+	for details.Status == wolt.StatusActive {
 		select {
 		case <-time.After(waitBetweenStatusCheck):
 			details, err = g.fetchDetails()
 			if err != nil {
 				return fmt.Errorf("get group details: %w", err)
 			}
-			status, err = details.Status()
-			if err != nil {
-				return fmt.Errorf("get status from details: %w", err)
-			}
 		case <-ctx.Done():
 			return fmt.Errorf("context canceled while waiting for group to progress")
 		}
 	}
 
-	if status == wolt.StatusCanceled {
+	if details.Status == wolt.StatusCanceled {
 		return fmt.Errorf("order canceled")
 	}
 
-	if status != wolt.StatusPendingTrans && status != wolt.StatusPurchased {
-		return fmt.Errorf("unknown order status: %s", status)
+	if details.Status != wolt.StatusPendingTrans && details.Status != wolt.StatusPurchased {
+		return fmt.Errorf("unknown order status: %s", details.Status)
 	}
 
 	return nil
@@ -126,15 +118,35 @@ func (g *groupOrder) CalculateDeliveryRate() (int, error) {
 		return 0, fmt.Errorf("get details: %w", err)
 	}
 
-	deliveryCoordinate, err := details.DeliveryCoordinate()
-	if err != nil {
-		return 0, fmt.Errorf("get delivery coordinate: %w", err)
-	}
-
-	deliveryPrice, err := venue.CalculateDeliveryRate(deliveryCoordinate)
+	deliveryPrice, err := venue.CalculateDeliveryRate(details.DeliveryCoordinate)
 	if err != nil {
 		return 0, fmt.Errorf("get delivery price: %w", err)
 	}
 
 	return deliveryPrice, nil
+}
+
+func (g *groupOrder) ToOrder() (*order.Order, error) {
+	details, err := g.Details()
+	if err != nil {
+		return nil, err
+	}
+	//venue, err := g.Venue()
+	//if err != nil {
+	//	return nil, err
+	//}
+
+
+	return &order.Order{
+		ID:           "",
+		Time:         time.Time{},
+		VenueName:    "",
+		VenueID:      details.VenueID,
+		VenueLink:    "",
+		VenueCity:    "",
+		Host:         "",
+		HostID:       "",
+		Status:       0,
+		DeliveryRate: 0,
+	}, nil
 }
