@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -13,7 +12,7 @@ import (
 	"time"
 
 	"github.com/Jeffail/gabs/v2"
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/prometheus/common/log"
 	"golang.org/x/net/html"
 )
@@ -253,26 +252,21 @@ func (g *Group) Details() (*OrderDetails, error) {
 		return nil, fmt.Errorf("details http res: %w", err)
 	}
 
-	output, err := ioutil.ReadAll(resp.Body)
+	output, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("reading output: %w", err)
 	}
 
-	gc, err := gabs.ParseJSON(output)
-	if err != nil {
-		return nil, fmt.Errorf("parse is active JSON (%s): %w", string(output), err)
-	}
-
-	return NewOrderDetails(gc)
+	return ParseOrderDetails(output)
 }
 
-func (g *Group) VenueDetails() (*VenueDetails, error) {
+func (g *Group) VenueDetails() (*Venue, error) {
 	details, err := g.Details()
 	if err != nil {
 		return nil, fmt.Errorf("get group details: %w", err)
 	}
 
-	req, err := g.prepareReq("GET", g.joinApiAddr(fmt.Sprintf("/v3/venues/%s", details.VenueID)), nil, nil)
+	req, err := g.prepareReq("GET", g.joinApiAddr(fmt.Sprintf("/v3/venues/%s", details.Details.VenueID)), nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("prepare venue request: %w", err)
 	}
@@ -282,17 +276,16 @@ func (g *Group) VenueDetails() (*VenueDetails, error) {
 		return nil, fmt.Errorf("send venue details request: %w", err)
 	}
 
-	output, err := ioutil.ReadAll(resp.Body)
+	output, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("reading output: %w", err)
 	}
 
-	gc, err := gabs.ParseJSON(output)
+	v, err := ParseVenue(output)
 	if err != nil {
-		return nil, fmt.Errorf("parse venue details JSON: %w", err)
+		return nil, fmt.Errorf("parse venue: %w", err)
 	}
-
-	return &VenueDetails{ParsedOutput: gc}, nil
+	return v, nil
 }
 
 func (g *Group) MarkAsReady() error {

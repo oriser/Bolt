@@ -27,15 +27,17 @@ func (h *Service) joinGroupOrder(groupID string) (*groupOrder, error) {
 	}
 
 	return &groupOrder{
+		id:        groupID,
 		woltGroup: g,
 	}, nil
 }
 
 type groupOrder struct {
+	id            string
 	woltGroup     *wolt.Group
 	markedAsReady bool
 	details       *wolt.OrderDetails
-	venue         *wolt.VenueDetails
+	venue         *wolt.Venue
 }
 
 func (g *groupOrder) fetchDetails() (*wolt.OrderDetails, error) {
@@ -47,13 +49,13 @@ func (g *groupOrder) fetchDetails() (*wolt.OrderDetails, error) {
 	return details, nil
 }
 
-func (g *groupOrder) fetchVenue() (*wolt.VenueDetails, error) {
-	venueDetails, err := g.woltGroup.VenueDetails()
+func (g *groupOrder) fetchVenue() (*wolt.Venue, error) {
+	venue, err := g.woltGroup.VenueDetails()
 	if err != nil {
 		return nil, fmt.Errorf("get venue details: %w", err)
 	}
-	g.venue = venueDetails
-	return venueDetails, nil
+	g.venue = venue
+	return venue, nil
 }
 
 func (g *groupOrder) MarkAsReady() error {
@@ -100,7 +102,7 @@ func (g *groupOrder) Details() (*wolt.OrderDetails, error) {
 	return g.details, nil
 }
 
-func (g *groupOrder) Venue() (*wolt.VenueDetails, error) {
+func (g *groupOrder) Venue() (*wolt.Venue, error) {
 	if g.venue == nil {
 		return g.fetchVenue()
 	}
@@ -118,7 +120,7 @@ func (g *groupOrder) CalculateDeliveryRate() (int, error) {
 		return 0, fmt.Errorf("get details: %w", err)
 	}
 
-	deliveryPrice, err := venue.CalculateDeliveryRate(details.DeliveryCoordinate)
+	deliveryPrice, err := venue.CalculateDeliveryRate(details.ParsedDeliveryCoordinate)
 	if err != nil {
 		return 0, fmt.Errorf("get delivery price: %w", err)
 	}
@@ -136,12 +138,11 @@ func (g *groupOrder) ToOrder() (*order.Order, error) {
 	//	return nil, err
 	//}
 
-
 	return &order.Order{
-		ID:           "",
+		ID:           g.id,
 		Time:         time.Time{},
 		VenueName:    "",
-		VenueID:      details.VenueID,
+		VenueID:      details.Details.VenueID,
 		VenueLink:    "",
 		VenueCity:    "",
 		Host:         "",
