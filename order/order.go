@@ -21,7 +21,8 @@ type Participant struct {
 
 type Order struct {
 	ID           string    `db:"id"`
-	Time         time.Time `db:"time"`
+	OriginalID   string    `db:"original_id"`
+	CreatedAt    time.Time `db:"created_at"`
 	VenueName    string    `db:"venue_name"`
 	VenueID      string    `db:"venue_id"`
 	VenueLink    string    `db:"venue_link"`

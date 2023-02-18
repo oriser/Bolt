@@ -57,7 +57,7 @@ func Run() error {
 		return fmt.Errorf("new dbStorage: %w", err)
 	}
 
-	serviceHandler, err := service.New(cfg.Handler, combined.NewPrioritizedUserStore(dbStorage, slackStorage), dbStorage, id, slackClient)
+	serviceHandler, err := service.New(cfg.Handler, combined.NewPrioritizedUserStore(dbStorage, slackStorage), dbStorage, dbStorage, id, slackClient)
 	if err != nil {
 		return fmt.Errorf("new service: %w", err)
 	}

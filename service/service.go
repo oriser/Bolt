@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/oriser/bolt/debt"
+	"github.com/oriser/bolt/order"
 	"github.com/oriser/bolt/user"
 )
 
@@ -36,6 +37,7 @@ type Service struct {
 	currentlyWorkingOrders sync.Map
 	userStore              user.Store
 	debtStore              debt.Store
+	orderStore             order.Store
 	selfID                 string
 	dontJoinAfter          time.Time
 	dontJoinAfterTZ        *time.Location
@@ -59,7 +61,7 @@ type LinksRequest struct {
 	Channel   string
 }
 
-func New(cfg Config, userStore user.Store, debtStore debt.Store, selfID string, eventNotification EventNotification) (*Service, error) {
+func New(cfg Config, userStore user.Store, debtStore debt.Store, orderStore order.Store, selfID string, eventNotification EventNotification) (*Service, error) {
 	var dontJoinAfter time.Time
 	var err error
 	if cfg.DontJoinAfter != "" {
@@ -81,6 +83,7 @@ func New(cfg Config, userStore user.Store, debtStore debt.Store, selfID string, 
 		eventNotification: eventNotification,
 		userStore:         userStore,
 		debtStore:         debtStore,
+		orderStore:        orderStore,
 		selfID:            selfID,
 		dontJoinAfter:     dontJoinAfter,
 		dontJoinAfterTZ:   dontJoinAfterTZ,

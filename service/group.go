@@ -159,8 +159,8 @@ func (g *groupOrder) ToOrder() (*order.Order, error) {
 	}
 
 	return &order.Order{
-		ID:           g.id,
-		Time:         details.CreatedAt,
+		OriginalID:   g.id,
+		CreatedAt:    details.CreatedAt,
 		VenueName:    venue.Name,
 		VenueID:      details.Details.VenueID,
 		VenueLink:    venue.Link,

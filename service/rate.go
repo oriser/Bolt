@@ -197,12 +197,27 @@ func (h *Service) shouldHandleOrder() bool {
 	return true
 }
 
+func (h *Service) saveOrderAsync(order *groupOrder) {
+	domainOrder, err := order.ToOrder()
+	if err != nil {
+		log.Printf("Error converting order %q: %v\n", order.id, err)
+	}
+	if err = h.orderStore.SaveOrder(context.Background(), domainOrder); err != nil {
+		log.Printf("Error saving order %q: %v\n", order.id, err)
+	}
+
+}
+
 func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRate, error) {
 	order, err := h.joinGroupOrder(groupID)
 	if err != nil {
 		return GroupRate{}, fmt.Errorf("join group order: %w", err)
 	}
 	h.informEvent(receiver, fmt.Sprintf("Hey :) Just letting you know I joined the group %s", groupID), "", messageID)
+
+	defer func() {
+		go h.saveOrderAsync(order)
+	}()
 
 	if err = order.MarkAsReady(); err != nil {
 		return GroupRate{}, fmt.Errorf("mark as ready in group: %w", err)
