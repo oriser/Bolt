@@ -3,6 +3,7 @@ package wolt
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type DeliveryInfo struct {
@@ -35,23 +36,34 @@ func (p *Participant) Name() string {
 	return p.FirstName
 }
 
+type Status string
+
+func (s Status) Purchased() bool {
+	return s == StatusPurchased || s == StatusPendingTrans
+}
+
 type OrderDetails struct {
-	Status  string `json:"status"`
+	Status        Status `json:"status"`
+	CreatedAtUnix struct {
+		DateUnix int64 `json:"$date"`
+	} `json:"created_at"`
 	Details struct {
 		VenueID      string       `json:"venue_id"`
 		DeliveryInfo DeliveryInfo `json:"delivery_info"`
 	} `json:"details"`
-	HostID                   string        `json:"host_id"`
-	Participants             []Participant `json:"participants"`
-	ParsedDeliveryCoordinate Coordinate    `json:"-"`
-	Host                     string        `json:"-"`
+	HostID       string        `json:"host_id"`
+	Participants []Participant `json:"participants"`
+
+	CreatedAt                time.Time  `json:"-"`
+	ParsedDeliveryCoordinate Coordinate `json:"-"`
+	Host                     string     `json:"-"`
 }
 
 const (
-	StatusActive       = "active"
-	StatusCanceled     = "cancelled"
-	StatusPendingTrans = "pending_transaction"
-	StatusPurchased    = "purchased"
+	StatusActive       Status = "active"
+	StatusCanceled     Status = "cancelled"
+	StatusPendingTrans Status = "pending_transaction"
+	StatusPurchased    Status = "purchased"
 )
 
 const DeliveryCoordinatesPath = "details.delivery_info.location.coordinates.coordinates"
@@ -75,6 +87,7 @@ func ParseOrderDetails(orderDetailsJSON []byte) (*OrderDetails, error) {
 		return nil, fmt.Errorf("get host: %w", err)
 	}
 
+	o.CreatedAt = time.UnixMilli(o.CreatedAtUnix.DateUnix)
 	return o, nil
 }
 

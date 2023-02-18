@@ -27,13 +27,15 @@ func (h *Service) joinGroupOrder(groupID string) (*groupOrder, error) {
 	}
 
 	return &groupOrder{
-		id:        groupID,
-		woltGroup: g,
+		deliveryPrice: -1,
+		id:            groupID,
+		woltGroup:     g,
 	}, nil
 }
 
 type groupOrder struct {
 	id            string
+	deliveryPrice int
 	woltGroup     *wolt.Group
 	markedAsReady bool
 	details       *wolt.OrderDetails
@@ -88,7 +90,7 @@ func (g *groupOrder) WaitUntilFinished(ctx context.Context, waitBetweenStatusChe
 		return fmt.Errorf("order canceled")
 	}
 
-	if details.Status != wolt.StatusPendingTrans && details.Status != wolt.StatusPurchased {
+	if !details.Status.Purchased() {
 		return fmt.Errorf("unknown order status: %s", details.Status)
 	}
 
@@ -110,6 +112,10 @@ func (g *groupOrder) Venue() (*wolt.Venue, error) {
 }
 
 func (g *groupOrder) CalculateDeliveryRate() (int, error) {
+	if g.deliveryPrice >= 0 {
+		return g.deliveryPrice, nil
+	}
+
 	venue, err := g.Venue()
 	if err != nil {
 		return 0, fmt.Errorf("get venue: %w", err)
@@ -125,6 +131,7 @@ func (g *groupOrder) CalculateDeliveryRate() (int, error) {
 		return 0, fmt.Errorf("get delivery price: %w", err)
 	}
 
+	g.deliveryPrice = deliveryPrice
 	return deliveryPrice, nil
 }
 
@@ -133,21 +140,34 @@ func (g *groupOrder) ToOrder() (*order.Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	//venue, err := g.Venue()
-	//if err != nil {
-	//	return nil, err
-	//}
+	venue, err := g.Venue()
+	if err != nil {
+		return nil, err
+	}
+
+	deliveryPrice, err := g.CalculateDeliveryRate()
+	if err != nil {
+		return nil, fmt.Errorf("calculate delivery price: %w", err)
+	}
+
+	status := order.StatusInvalid
+	switch {
+	case details.Status == wolt.StatusCanceled:
+		status = order.StatusCanceled
+	case details.Status.Purchased():
+		status = order.StatusDone
+	}
 
 	return &order.Order{
 		ID:           g.id,
-		Time:         time.Time{},
-		VenueName:    "",
+		Time:         details.CreatedAt,
+		VenueName:    venue.Name,
 		VenueID:      details.Details.VenueID,
-		VenueLink:    "",
-		VenueCity:    "",
-		Host:         "",
-		HostID:       "",
-		Status:       0,
-		DeliveryRate: 0,
+		VenueLink:    venue.Link,
+		VenueCity:    venue.City,
+		Host:         details.Host,
+		HostID:       details.HostID,
+		Status:       status,
+		DeliveryRate: deliveryPrice,
 	}, nil
 }

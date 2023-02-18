@@ -11,6 +11,11 @@ const (
 	PriceRangesKey = "results.0.delivery_specs.delivery_pricing"
 )
 
+type VenueName struct {
+	Lang  string `json:"lang"`
+	Value string `json:"value"`
+}
+
 type Venue struct {
 	Location struct {
 		Coordinates []float64 `json:"coordinates"`
@@ -18,6 +23,11 @@ type Venue struct {
 	DeliverySpecs struct {
 		DeliveryPricing PriceRanges `json:"delivery_pricing"`
 	} `json:"delivery_specs"`
+	Names []VenueName `json:"name"`
+	Link  string      `json:"public_url"`
+	City  string      `json:"city"`
+
+	Name             string
 	ParsedCoordinate Coordinate `json:"-"`
 }
 
@@ -54,6 +64,12 @@ func ParseVenue(venuesJSON []byte) (*Venue, error) {
 	v.ParsedCoordinate, err = CoordinateFromArray(v.Location.Coordinates)
 	if err != nil {
 		return nil, fmt.Errorf("venue coordinate from array: %w", err)
+	}
+
+	for _, name := range v.Names {
+		if name.Lang == "en" || v.Name == "" {
+			v.Name = name.Value
+		}
 	}
 
 	return v, nil
