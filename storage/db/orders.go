@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -12,7 +13,8 @@ import (
 
 type orderModel struct {
 	*order.Order
-	DBCreatedAt time.Time `db:"db_created_at"`
+	MarshaledParticipants []byte    `db:"participants"`
+	DBCreatedAt           time.Time `db:"db_created_at"`
 }
 
 func (d *DBStore) SaveOrder(_ context.Context, order *order.Order) error {
@@ -22,8 +24,14 @@ func (d *DBStore) SaveOrder(_ context.Context, order *order.Order) error {
 	order.ID = uuid.NewString()
 	model := &orderModel{Order: order, DBCreatedAt: time.Now()}
 
-	sql, args, err := sq.Insert("orders").Values(model.ID, model.OriginalID, model.CreatedAt, model.DBCreatedAt,
-		model.VenueName, model.VenueID, model.VenueLink, model.VenueCity, model.Host, model.HostID, model.Status, model.DeliveryRate).ToSql()
+	marshaledParticipants, err := json.Marshal(order.Participants)
+	if err != nil {
+		return fmt.Errorf("marshal particiapnts: %w", err)
+	}
+	model.MarshaledParticipants = marshaledParticipants
+
+	sql, args, err := sq.Insert("orders").Values(model.ID, model.OriginalID, model.CreatedAt, model.DBCreatedAt, model.Receiver,
+		model.VenueName, model.VenueID, model.VenueLink, model.VenueCity, model.Host, model.HostID, model.Status, model.MarshaledParticipants, model.DeliveryRate).ToSql()
 	if err != nil {
 		return fmt.Errorf("generating insert SQL: %w", err)
 	}

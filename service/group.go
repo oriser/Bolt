@@ -135,7 +135,7 @@ func (g *groupOrder) CalculateDeliveryRate() (int, error) {
 	return deliveryPrice, nil
 }
 
-func (g *groupOrder) ToOrder() (*order.Order, error) {
+func (g *groupOrder) ToOrder(rates []Rate, receiver string) (*order.Order, error) {
 	details, err := g.Details()
 	if err != nil {
 		return nil, err
@@ -158,9 +158,22 @@ func (g *groupOrder) ToOrder() (*order.Order, error) {
 		status = order.StatusDone
 	}
 
+	participants := make([]order.Participant, 0, len(rates))
+	for _, rate := range rates {
+		p := order.Participant{
+			Name:   rate.WoltName,
+			Amount: rate.Amount,
+		}
+		if rate.User != nil {
+			p.ID = rate.User.ID
+		}
+		participants = append(participants, p)
+	}
+
 	return &order.Order{
 		OriginalID:   g.id,
 		CreatedAt:    details.CreatedAt,
+		Receiver:     receiver,
 		VenueName:    venue.Name,
 		VenueID:      details.Details.VenueID,
 		VenueLink:    venue.Link,
@@ -168,6 +181,7 @@ func (g *groupOrder) ToOrder() (*order.Order, error) {
 		Host:         details.Host,
 		HostID:       details.HostID,
 		Status:       status,
+		Participants: participants,
 		DeliveryRate: deliveryPrice,
 	}, nil
 }

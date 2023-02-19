@@ -197,8 +197,8 @@ func (h *Service) shouldHandleOrder() bool {
 	return true
 }
 
-func (h *Service) saveOrderAsync(order *groupOrder) {
-	domainOrder, err := order.ToOrder()
+func (h *Service) saveOrderAsync(order *groupOrder, groupRate GroupRate, receiver string) {
+	domainOrder, err := order.ToOrder(groupRate.Rates, receiver)
 	if err != nil {
 		log.Printf("Error converting order %q: %v\n", order.id, err)
 	}
@@ -208,7 +208,7 @@ func (h *Service) saveOrderAsync(order *groupOrder) {
 
 }
 
-func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRate, error) {
+func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRate GroupRate, err error) {
 	order, err := h.joinGroupOrder(groupID)
 	if err != nil {
 		return GroupRate{}, fmt.Errorf("join group order: %w", err)
@@ -216,7 +216,7 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRat
 	h.informEvent(receiver, fmt.Sprintf("Hey :) Just letting you know I joined the group %s", groupID), "", messageID)
 
 	defer func() {
-		go h.saveOrderAsync(order)
+		go h.saveOrderAsync(order, groupRate, receiver)
 	}()
 
 	if err = order.MarkAsReady(); err != nil {

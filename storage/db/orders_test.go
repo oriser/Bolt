@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -14,15 +15,27 @@ import (
 
 func getDummyOrder() *order.Order {
 	return &order.Order{
-		ID:           uuid.NewString(),
-		OriginalID:   "ABCD",
-		CreatedAt:    time.Now(),
-		VenueName:    "testven",
-		VenueID:      "testvenid",
-		VenueLink:    "venlink",
-		VenueCity:    "vencity",
-		Host:         "host",
-		HostID:       "hostid",
+		ID:         uuid.NewString(),
+		OriginalID: "ABCD",
+		CreatedAt:  time.Now(),
+		Receiver:   "receiver",
+		VenueName:  "testven",
+		VenueID:    "testvenid",
+		VenueLink:  "venlink",
+		VenueCity:  "vencity",
+		Host:       "host",
+		HostID:     "hostid",
+		Participants: []order.Participant{
+			{
+				Name:   "Test 1",
+				Amount: 50.4,
+			},
+			{
+				Name:   "Test2",
+				ID:     "id123",
+				Amount: 20.431,
+			},
+		},
 		Status:       order.StatusDone,
 		DeliveryRate: 50,
 	}
@@ -66,6 +79,8 @@ func TestSaveOrder(t *testing.T) {
 
 				require.Len(t, listedOrders, 1)
 
+				err = json.Unmarshal(listedOrders[0].MarshaledParticipants, &listedOrders[0].Order.Participants)
+				require.NoError(t, err)
 				listedOrders[0].CreatedAt = formatTime(t, listedOrders[0].CreatedAt)
 				savedOrder.CreatedAt = formatTime(t, listedOrders[0].CreatedAt)
 				assert.Equal(t, savedOrder, listedOrders[0].Order)
