@@ -30,8 +30,8 @@ func (d *DBStore) SaveOrder(_ context.Context, order *order.Order) error {
 	}
 	model.MarshaledParticipants = marshaledParticipants
 
-	sql, args, err := sq.Insert("orders").Values(model.ID, model.OriginalID, model.CreatedAt, model.DBCreatedAt, model.Receiver,
-		model.VenueName, model.VenueID, model.VenueLink, model.VenueCity, model.Host, model.HostID, model.Status, model.MarshaledParticipants, model.DeliveryRate).ToSql()
+	sql, args, err := sq.Insert("orders").Values(model.ID, model.OriginalID, model.CreatedAt, model.DBCreatedAt, model.Receiver, // nolint: it doesn't recognize the embedded struct
+		model.VenueName, model.VenueID, model.VenueLink, model.VenueCity, model.Host, model.HostID, model.Status, model.MarshaledParticipants, model.DeliveryRate).ToSql() // nolint: it doesn't recognize the embedded struct
 	if err != nil {
 		return fmt.Errorf("generating insert SQL: %w", err)
 	}
