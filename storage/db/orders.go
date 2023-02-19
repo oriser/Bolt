@@ -26,7 +26,7 @@ func (d *DBStore) SaveOrder(_ context.Context, order *order.Order) error {
 
 	marshaledParticipants, err := json.Marshal(order.Participants)
 	if err != nil {
-		return fmt.Errorf("marshal particiapnts: %w", err)
+		return fmt.Errorf("marshal participants: %w", err)
 	}
 	model.MarshaledParticipants = marshaledParticipants
 
