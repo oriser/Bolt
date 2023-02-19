@@ -81,8 +81,8 @@ func TestSaveOrder(t *testing.T) {
 
 				err = json.Unmarshal(listedOrders[0].MarshaledParticipants, &listedOrders[0].Order.Participants)
 				require.NoError(t, err)
-				listedOrders[0].CreatedAt = formatTime(t, listedOrders[0].CreatedAt) // nolint: it doesn't recognize the embedded struct
-				savedOrder.CreatedAt = formatTime(t, listedOrders[0].CreatedAt)      // nolint: it doesn't recognize the embedded struct
+				listedOrders[0].CreatedAt = formatTime(t, listedOrders[0].CreatedAt) // nolint // it doesn't recognize the embedded struct
+				savedOrder.CreatedAt = formatTime(t, listedOrders[0].CreatedAt)      // nolint // it doesn't recognize the embedded struct
 				assert.Equal(t, savedOrder, listedOrders[0].Order)
 			}
 		})
