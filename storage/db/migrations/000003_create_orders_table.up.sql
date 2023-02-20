@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS orders (
     venue_link TEXT NULL,
     venue_city TEXT NOT NULL,
     host TEXT NOT NULL,
-    host_id TEXT NOT NULL,
+    host_id TEXT NULL,
     status INTEGER NOT NULL,
     participants JSON NOT NULL,
     delivery_rate INTEGER NOT NULL
