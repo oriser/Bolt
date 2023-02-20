@@ -77,9 +77,9 @@ func ParseOrderDetails(orderDetailsJSON []byte) (*OrderDetails, error) {
 		return nil, fmt.Errorf("unmarshal details: %w", err)
 	}
 
-	o.ParsedDeliveryCoordinate = Coordinate{
-		Lat: o.Details.DeliveryInfo.Location.Coordinates.Coordinates[0],
-		Lon: o.Details.DeliveryInfo.Location.Coordinates.Coordinates[1],
+	o.ParsedDeliveryCoordinate, err = CoordinateFromArray(o.Details.DeliveryInfo.Location.Coordinates.Coordinates)
+	if err != nil {
+		return nil, fmt.Errorf("parse coordinates: %w", err)
 	}
 
 	o.Host, err = o.host()
