@@ -277,8 +277,8 @@ func orderedRates(totalPerParticipant map[string]float64) []service.Rate {
 	rates := make([]service.Rate, len(totalPerParticipant))
 	for i, key := range keys {
 		rates[i] = service.Rate{
-			Name:   key,
-			Amount: totalPerParticipant[key],
+			WoltName: key,
+			Amount:   totalPerParticipant[key],
 		}
 	}
 	return rates
@@ -314,8 +314,8 @@ func buildRatesMessage(t *testing.T, order *woltserver.Order, expectedDelivery i
 			rates[i] = rate
 		}
 
-		name := rate.Name
-		if id, ok := participantIDsMapping[rate.Name]; ok {
+		name := rate.WoltName
+		if id, ok := participantIDsMapping[rate.WoltName]; ok {
 			name = fmt.Sprintf("<@%s>", id)
 		}
 		ratesStringBuilder.WriteString(fmt.Sprintf("%s: %.2f\n", name, rate.Amount))
@@ -355,7 +355,7 @@ func validateDebts(t *testing.T,
 	rates []service.Rate) {
 	ratesMap := make(map[string]float64)
 	for _, rate := range rates {
-		ratesMap[rate.Name] = rate.Amount
+		ratesMap[rate.WoltName] = rate.Amount
 	}
 	t.Log("Waiting for a debt cycle")
 	time.Sleep(DebtReminderInterval)

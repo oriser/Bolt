@@ -111,7 +111,7 @@ func TestAddListForOrderAndRemove(t *testing.T) {
 			for _, debt := range tc.debts {
 				currentOrderID := debt.OrderID
 
-				err := dbTest.db.AdDebt(debt)
+				err := dbTest.db.AddDebt(debt)
 				assert.NoError(t, err)
 
 				assert.NotEmpty(t, debt.ID)

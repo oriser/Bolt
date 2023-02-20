@@ -136,43 +136,41 @@ func (h *Service) createDebt(amount float64, initiatedTransport, orderID, messag
 	}
 
 	debt := debtDomain.NewDebt(borrowerUser.ID, lenderUser.ID, orderID, initiatedTransport, messageID, amount)
-	if err := h.debtStore.AdDebt(debt); err != nil {
+	if err := h.debtStore.AddDebt(debt); err != nil {
 		return fmt.Errorf("add debt: %w", err)
 	}
 
 	return nil
 }
 
-func (h *Service) addDebts(usersMap map[string]*userDomain.User, initiatedTransport, orderID string, rates map[string]float64, lender string, messageID string) error {
+func (h *Service) addDebts(initiatedTransport, orderID string, rates GroupRate, messageID string) error {
 	if h.debtStore == nil {
 		return nil
 	}
 
-	lenderUser, ok := usersMap[lender]
-	if !ok {
-		h.informEvent(initiatedTransport, fmt.Sprintf("I didn't find the user of the host (%s), I won't track debts for order %s", lender, orderID), "", messageID)
+	if rates.HostUser == nil {
+		h.informEvent(initiatedTransport, fmt.Sprintf("I didn't find the user of the host (%s), I won't track debts for order %s", rates.HostWoltUser, orderID), "", messageID)
 		return nil
 	}
 
 	h.informEvent(initiatedTransport,
 		fmt.Sprintf("I'll keep reminding you to pay, when you pay you can react with :%s: to the rates message and I'll stop bothering you.\n"+
 			"<@%s>, as the host, you can react with :%s: to the rates message to cancel debts tracking for Wolt order ID %s",
-			MarkAsPaidReaction, lenderUser.TransportID, HostRemoveDebts, orderID),
+			MarkAsPaidReaction, rates.HostUser.TransportID, HostRemoveDebts, orderID),
 		"", messageID)
 
-	for name, amount := range rates {
-		if name == lender {
+	for _, rate := range rates.Rates {
+		if rate.WoltName == rates.HostWoltUser {
 			// Don't create debt for the lender
 			continue
 		}
 
-		user, ok := usersMap[name]
-		if !ok {
-			h.informEvent(initiatedTransport, fmt.Sprintf("I won't track %q payment because I can't find his user.", name), "", messageID)
+		if rate.User == nil {
+			h.informEvent(initiatedTransport, fmt.Sprintf("I won't track %q payment because I can't find his user.", rate.WoltName), "", messageID)
 			continue
 		}
-		if err := h.createDebt(amount, initiatedTransport, orderID, messageID, user, lenderUser); err != nil {
-			log.Println(fmt.Sprintf("Error creating debt for user %q in order ID %q: %v", user, orderID, err))
+		if err := h.createDebt(rate.Amount, initiatedTransport, orderID, messageID, rate.User, rates.HostUser); err != nil {
+			log.Println(fmt.Sprintf("Error creating debt for user %q in order ID %q: %v", rate.WoltName, orderID, err))
 			continue
 		}
 	}

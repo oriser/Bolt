@@ -1,107 +1,119 @@
 package wolt
 
 import (
+	"encoding/json"
 	"fmt"
-
-	"github.com/Jeffail/gabs/v2"
+	"time"
 )
 
+type DeliveryInfo struct {
+	Location struct {
+		Coordinates struct {
+			Coordinates []float64 `json:"coordinates"`
+		} `json:"coordinates"`
+	} `json:"location"`
+}
+
+type Item struct {
+	BasePrice float64 `json:"baseprice"`
+	EndAmount float64 `json:"end_amount"`
+}
+
+type Participant struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Status    string `json:"status"`
+	UserID    string `json:"user_id"`
+	Basket    struct {
+		Items []Item `json:"items"`
+	} `json:"basket"`
+}
+
+func (p *Participant) Name() string {
+	if p.LastName != "" {
+		return fmt.Sprintf("%s %s", p.FirstName, p.LastName)
+	}
+	return p.FirstName
+}
+
+type Status string
+
+func (s Status) Purchased() bool {
+	return s == StatusPurchased || s == StatusPendingTrans
+}
+
 type OrderDetails struct {
-	ParsedOutput *gabs.Container
+	Status        Status `json:"status"`
+	CreatedAtUnix struct {
+		DateUnix int64 `json:"$date"`
+	} `json:"created_at"`
+	Details struct {
+		VenueID      string       `json:"venue_id"`
+		DeliveryInfo DeliveryInfo `json:"delivery_info"`
+	} `json:"details"`
+	HostID       string        `json:"host_id"`
+	Participants []Participant `json:"participants"`
+
+	CreatedAt                time.Time  `json:"-"`
+	ParsedDeliveryCoordinate Coordinate `json:"-"`
+	Host                     string     `json:"-"`
 }
 
 const (
-	StatusActive       = "active"
-	StatusCanceled     = "cancelled"
-	StatusPendingTrans = "pending_transaction"
-	StatusPurchased    = "purchased"
+	StatusActive       Status = "active"
+	StatusCanceled     Status = "cancelled"
+	StatusPendingTrans Status = "pending_transaction"
+	StatusPurchased    Status = "purchased"
 )
 
 const DeliveryCoordinatesPath = "details.delivery_info.location.coordinates.coordinates"
 
-func (o *OrderDetails) Status() (string, error) {
-	if !o.ParsedOutput.Exists("status") {
-		return "", fmt.Errorf("'status' key not found in output json")
+func ParseOrderDetails(orderDetailsJSON []byte) (*OrderDetails, error) {
+	o := &OrderDetails{}
+	var err error
+
+	err = json.Unmarshal(orderDetailsJSON, o)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal details: %w", err)
 	}
 
-	return o.ParsedOutput.S("status").Data().(string), nil
+	o.ParsedDeliveryCoordinate, err = CoordinateFromArray(o.Details.DeliveryInfo.Location.Coordinates.Coordinates)
+	if err != nil {
+		return nil, fmt.Errorf("parse coordinates: %w", err)
+	}
+
+	o.Host, err = o.host()
+	if err != nil {
+		return nil, fmt.Errorf("get host: %w", err)
+	}
+
+	o.CreatedAt = time.UnixMilli(o.CreatedAtUnix.DateUnix)
+	return o, nil
 }
 
-func (o *OrderDetails) VenueID() (string, error) {
-	if !o.ParsedOutput.Exists("details", "venue_id") {
-		return "", fmt.Errorf("'details.venue_id' key not found in output json")
-	}
-	return o.ParsedOutput.S("details", "venue_id").Data().(string), nil
-}
-
-func (o *OrderDetails) DeliveryCoordinate() (Coordinate, error) {
-	if !o.ParsedOutput.ExistsP(DeliveryCoordinatesPath) {
-		return Coordinate{}, fmt.Errorf("%q key not found in output json", DeliveryCoordinatesPath)
-	}
-
-	return CoordinateFromArray(o.ParsedOutput.Path(DeliveryCoordinatesPath))
-}
-
-func (o *OrderDetails) Host() (string, error) {
-	if !o.ParsedOutput.Exists("participants") {
-		return "", fmt.Errorf("no participants")
-	}
-	if !o.ParsedOutput.Exists("host_id") {
-		return "", fmt.Errorf("no host_id")
-	}
-
-	hostID := o.ParsedOutput.S("host_id").Data().(string)
-	if hostID == "" {
-		return "", fmt.Errorf("empty host_id")
-	}
-
-	for _, participant := range o.ParsedOutput.S("participants").Children() {
-		if participant.S("user_id").Data().(string) == hostID {
-			return o.nameFromParticipant(participant), nil
+func (o *OrderDetails) host() (string, error) {
+	for _, participant := range o.Participants {
+		if participant.UserID == o.HostID {
+			return participant.Name(), nil
 		}
 	}
 
-	return "", fmt.Errorf("user matching host ID %q not found", hostID)
+	return "", fmt.Errorf("user matching host ID %q not found", o.HostID)
 }
 
 func (o *OrderDetails) RateByPerson() (map[string]float64, error) {
-	if !o.ParsedOutput.Exists("participants") {
-		return nil, fmt.Errorf("no participants")
-	}
-
 	output := make(map[string]float64)
-	for _, participant := range o.ParsedOutput.S("participants").Children() {
-		if !participant.Exists("basket", "items") {
-			continue
-		}
+	for _, participant := range o.Participants {
 		total := 0.0
-		for _, item := range participant.S("basket", "items").Children() {
-			if !item.Exists("end_amount") {
-				continue
-			}
-			total += item.S("end_amount").Data().(float64) / 100
+		for _, item := range participant.Basket.Items {
+			total += item.EndAmount / 100
 		}
 		if total == 0 {
 			continue
 		}
 
-		output[o.nameFromParticipant(participant)] = total
+		output[participant.Name()] = total
 	}
 
 	return output, nil
-}
-
-func (o *OrderDetails) nameFromParticipant(participant *gabs.Container) string {
-	name := participant.S("first_name").Data().(string)
-	lastName := ""
-	if participant.Exists("last_name") {
-		lastNameInt := participant.S("last_name").Data()
-		if lastNameInt != nil {
-			lastName = lastNameInt.(string)
-		}
-	}
-	if lastName != "" {
-		name = name + " " + lastName
-	}
-	return name
 }

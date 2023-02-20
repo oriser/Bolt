@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-
-	"github.com/Jeffail/gabs/v2"
 )
 
 const (
@@ -13,8 +11,24 @@ const (
 	PriceRangesKey = "results.0.delivery_specs.delivery_pricing"
 )
 
-type VenueDetails struct {
-	ParsedOutput *gabs.Container
+type VenueName struct {
+	Lang  string `json:"lang"`
+	Value string `json:"value"`
+}
+
+type Venue struct {
+	Location struct {
+		Coordinates []float64 `json:"coordinates"`
+	} `json:"location"`
+	DeliverySpecs struct {
+		DeliveryPricing PriceRanges `json:"delivery_pricing"`
+	} `json:"delivery_specs"`
+	Names []VenueName `json:"name"`
+	Link  string      `json:"public_url"`
+	City  string      `json:"city"`
+
+	Name             string
+	ParsedCoordinate Coordinate `json:"-"`
 }
 
 type Coordinate struct {
@@ -33,15 +47,44 @@ type DistanceRange struct {
 	MaxDistance int `json:"max"`
 }
 
+func ParseVenue(venuesJSON []byte) (*Venue, error) {
+	var venues struct {
+		Results []*Venue `json:"results"`
+	}
+	var err error
+	if err = json.Unmarshal(venuesJSON, &venues); err != nil {
+		return nil, fmt.Errorf("parse venue details JSON: %w", err)
+	}
+
+	if len(venues.Results) != 1 {
+		return nil, fmt.Errorf("expected one venue to return but got #%d", len(venues.Results))
+	}
+
+	v := venues.Results[0]
+	v.ParsedCoordinate, err = CoordinateFromArray(v.Location.Coordinates)
+	if err != nil {
+		return nil, fmt.Errorf("venue coordinate from array: %w", err)
+	}
+
+	for _, name := range v.Names {
+		if name.Lang == "en" || v.Name == "" {
+			v.Name = name.Value
+		}
+	}
+
+	return v, nil
+}
+
 // haversin(θ) function
 func hsin(theta float64) float64 {
 	return math.Pow(math.Sin(theta/2), 2)
 }
 
 // Distance function returns the distance (in meters) between two points of
-//     a given longitude and latitude relatively accurately (using a spherical
-//     approximation of the Earth) through the Haversin Distance Formula for
-//     great arc distance on a sphere with accuracy for small distances
+//
+//	a given longitude and latitude relatively accurately (using a spherical
+//	approximation of the Earth) through the Haversin Distance Formula for
+//	great arc distance on a sphere with accuracy for small distances
 //
 // point coordinates are supplied in degrees and converted into rad. in the func
 //
@@ -64,43 +107,21 @@ func Distance(first, second Coordinate) float64 {
 	return 2 * r * math.Asin(math.Sqrt(h))
 }
 
-func CoordinateFromArray(arrayContainer *gabs.Container) (Coordinate, error) {
-	c := Coordinate{}
-	children := arrayContainer.Children()
-	if len(children) != 2 {
-		marshaled, _ := arrayContainer.MarshalJSON()
-		return c, fmt.Errorf("%q doesn't have exactly 2 elements: %s", CoordinateKey, string(marshaled))
+func CoordinateFromArray(coordinateArr []float64) (Coordinate, error) {
+	if len(coordinateArr) != 2 {
+		return Coordinate{}, fmt.Errorf("expected exactly 2 items in coordinate array but got #%d", len(coordinateArr))
 	}
 
-	lat, ok := children[0].Data().(float64)
-	if !ok {
-		return c, fmt.Errorf("venue latitude is not float64: %v (%T)", children[0].Data(), children[0].Data())
-	}
-	c.Lat = lat
-
-	lon, ok := children[1].Data().(float64)
-	if !ok {
-		return c, fmt.Errorf("venue lotitude is not float64: %v (%T)", children[1].Data(), children[1].Data())
-	}
-	c.Lon = lon
-
-	return c, nil
+	return Coordinate{
+		Lat: coordinateArr[0],
+		Lon: coordinateArr[1],
+	}, nil
 }
 
-func (v *VenueDetails) CalculateDeliveryRate(source Coordinate) (int, error) {
-	location, err := v.Location()
-	if err != nil {
-		return 0, fmt.Errorf("get vennue location: %w", err)
-	}
-
-	pricesRange, err := v.PriceRanges()
-	if err != nil {
-		return 0, fmt.Errorf("get vennue prices range: %w", err)
-	}
-
-	distance := int(Distance(location, source))
-	price := pricesRange.BasePrice
-	for _, distanceRange := range pricesRange.DistanceRanges {
+func (v *Venue) CalculateDeliveryRate(source Coordinate) (int, error) {
+	distance := int(Distance(v.ParsedCoordinate, source))
+	price := v.DeliverySpecs.DeliveryPricing.BasePrice
+	for _, distanceRange := range v.DeliverySpecs.DeliveryPricing.DistanceRanges {
 		if distance >= distanceRange.MinDistance && (distance < distanceRange.MaxDistance || distanceRange.MaxDistance == 0) {
 			price += distanceRange.AddedPrice
 			break
@@ -108,31 +129,4 @@ func (v *VenueDetails) CalculateDeliveryRate(source Coordinate) (int, error) {
 	}
 
 	return price / 100, nil
-}
-
-func (v *VenueDetails) PriceRanges() (PriceRanges, error) {
-	p := PriceRanges{}
-	if !v.ParsedOutput.ExistsP(PriceRangesKey) {
-		return p, fmt.Errorf("no %q key in venue JSON", PriceRangesKey)
-	}
-	marshaled, err := v.ParsedOutput.Path(PriceRangesKey).MarshalJSON()
-	if err != nil {
-		return p, fmt.Errorf("remarshaling prices range: %w", err)
-	}
-
-	err = json.Unmarshal(marshaled, &p)
-	if err != nil {
-		return p, fmt.Errorf("unmarshal prices range: %w", err)
-	}
-
-	return p, nil
-}
-
-func (v *VenueDetails) Location() (Coordinate, error) {
-	c := Coordinate{}
-	if !v.ParsedOutput.ExistsP(CoordinateKey) {
-		return c, fmt.Errorf("no %q key in venue JSON", CoordinateKey)
-	}
-
-	return CoordinateFromArray(v.ParsedOutput.Path(CoordinateKey))
 }

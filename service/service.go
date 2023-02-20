@@ -2,10 +2,12 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/oriser/bolt/debt"
+	"github.com/oriser/bolt/order"
 	"github.com/oriser/bolt/user"
 )
 
@@ -35,6 +37,7 @@ type Service struct {
 	currentlyWorkingOrders sync.Map
 	userStore              user.Store
 	debtStore              debt.Store
+	orderStore             order.Store
 	selfID                 string
 	dontJoinAfter          time.Time
 	dontJoinAfterTZ        *time.Location
@@ -58,7 +61,7 @@ type LinksRequest struct {
 	Channel   string
 }
 
-func New(cfg Config, userStore user.Store, debtStore debt.Store, selfID string, eventNotification EventNotification) (*Service, error) {
+func New(cfg Config, userStore user.Store, debtStore debt.Store, orderStore order.Store, selfID string, eventNotification EventNotification) (*Service, error) {
 	var dontJoinAfter time.Time
 	var err error
 	if cfg.DontJoinAfter != "" {
@@ -80,8 +83,28 @@ func New(cfg Config, userStore user.Store, debtStore debt.Store, selfID string, 
 		eventNotification: eventNotification,
 		userStore:         userStore,
 		debtStore:         debtStore,
+		orderStore:        orderStore,
 		selfID:            selfID,
 		dontJoinAfter:     dontJoinAfter,
 		dontJoinAfterTZ:   dontJoinAfterTZ,
 	}, nil
+}
+
+func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) {
+	if h.eventNotification == nil {
+		return
+	}
+
+	messageID, err := h.eventNotification.SendMessage(receiver, event, initialMessageID)
+	if err != nil {
+		log.Printf("Error informing event to receiver %q: %v\n", receiver, err)
+		return
+	}
+
+	if reactionEmoji == "" {
+		return
+	}
+	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
+		log.Printf("Error adding reaction to message ID %s:%v\n", messageID, err)
+	}
 }

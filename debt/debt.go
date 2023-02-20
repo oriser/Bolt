@@ -18,7 +18,7 @@ type Debt struct {
 }
 
 type Store interface {
-	AdDebt(debt *Debt) error
+	AddDebt(debt *Debt) error
 	RemoveDebtInOrderID(orderID, debtID string) error
 	ListDebtsForOrderID(orderID string) ([]*Debt, error)
 }

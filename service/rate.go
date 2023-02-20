@@ -10,7 +10,6 @@ import (
 	"time"
 
 	userDomain "github.com/oriser/bolt/user"
-	"github.com/oriser/bolt/wolt"
 	"github.com/oriser/regroup"
 )
 
@@ -26,31 +25,25 @@ type ParsedWoltGroupID struct {
 }
 
 type Rate struct {
-	Name   string
-	Amount float64
+	WoltName string
+	User     *userDomain.User
+	Amount   float64
 }
 
 type GroupRate struct {
-	Rates        map[string]float64
-	Host         string
+	Rates        []Rate
+	HostWoltUser string
+	HostUser     *userDomain.User
 	DeliveryRate int
 }
 
-func (g *GroupRate) OrderedRates() []Rate {
-	keys := make([]string, 0, len(g.Rates))
-	for key := range g.Rates {
+func getSortedKeys(m map[string]float64) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-
-	rates := make([]Rate, len(g.Rates))
-	for i, key := range keys {
-		rates[i] = Rate{
-			Name:   key,
-			Amount: g.Rates[key],
-		}
-	}
-	return rates
+	return keys
 }
 
 func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
@@ -84,11 +77,10 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 		return "", nil
 	}
 
-	usersMap := h.getUsersFromGroupRate(groupRate)
-	ratesMessage := h.buildRatesMessage(usersMap, groupRate, groupID.ID)
+	ratesMessage := h.buildRatesMessage(groupRate, groupID.ID)
 	h.informEvent(req.Channel, ratesMessage, MarkAsPaidReaction, req.MessageID)
 
-	if err := h.addDebts(usersMap, req.Channel, groupID.ID, groupRate.Rates, groupRate.Host, req.MessageID); err != nil {
+	if err := h.addDebts(req.Channel, groupID.ID, groupRate, req.MessageID); err != nil {
 		log.Println(fmt.Sprintf("Error adding debts: %s", err.Error()))
 		h.informEvent(req.Channel, "I had an error adding debts, I won't track this order", "", req.MessageID)
 	}
@@ -114,34 +106,24 @@ func (h *Service) getWoltGroupID(links []Link) *ParsedWoltGroupID {
 	return nil
 }
 
-func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) {
-	if h.eventNotification == nil {
-		return
-	}
-
-	messageID, err := h.eventNotification.SendMessage(receiver, event, initialMessageID)
-	if err != nil {
-		log.Printf("Error informing event to receiver %q: %v\n", receiver, err)
-		return
-	}
-
-	if reactionEmoji == "" {
-		return
-	}
-	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
-		log.Printf("Error adding reaction to message ID %s:%v\n", messageID, err)
-	}
-}
-
-func (h *Service) getUsersFromGroupRate(groupRate GroupRate) map[string]*userDomain.User {
-	ret := make(map[string]*userDomain.User)
-
-	if _, ok := groupRate.Rates[groupRate.Host]; !ok {
+func (h *Service) buildGroupRates(woltRates map[string]float64, host string, deliveryRate int) GroupRate {
+	if _, ok := woltRates[host]; !ok {
 		// The host didn't take anything, so he won't be included in the rates, add it here just to fetch his user
-		groupRate.Rates[groupRate.Host] = 0.0
+		woltRates[host] = 0.0
+	}
+	sortedKeys := getSortedKeys(woltRates)
+	groupRate := GroupRate{
+		Rates:        make([]Rate, len(woltRates)),
+		HostWoltUser: host,
+		DeliveryRate: deliveryRate,
 	}
 
-	for person := range groupRate.Rates {
+	for i, person := range sortedKeys {
+		groupRate.Rates[i] = Rate{
+			WoltName: person,
+			User:     nil,
+			Amount:   woltRates[person],
+		}
 		users, err := h.userStore.ListUsers(context.Background(), userDomain.ListFilter{Names: []string{person}})
 		if err != nil {
 			log.Printf("Error getting user %s from storage: %v\n", person, err)
@@ -156,40 +138,38 @@ func (h *Service) getUsersFromGroupRate(groupRate GroupRate) map[string]*userDom
 			continue
 		}
 
-		ret[person] = users[0]
+		if person == host {
+			groupRate.HostUser = users[0]
+		}
+		groupRate.Rates[i].User = users[0]
 	}
-	return ret
+
+	return groupRate
 }
 
-func (h *Service) buildRatesMessage(usersMap map[string]*userDomain.User, groupRate GroupRate, groupID string) string {
+func (h *Service) buildRatesMessage(groupRate GroupRate, groupID string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Rates for Wolt order ID %s (including %d NIS for delivery):\n", groupID, groupRate.DeliveryRate))
 
-	for _, rate := range groupRate.OrderedRates() {
-		userID := rate.Name
-
-		user, ok := usersMap[rate.Name]
-		if ok {
-			userID = fmt.Sprintf("<@%s>", user.TransportID)
+	for _, rate := range groupRate.Rates {
+		userID := rate.WoltName
+		if rate.User != nil {
+			userID = fmt.Sprintf("<@%s>", rate.User.TransportID)
 		}
 
 		sb.WriteString(fmt.Sprintf("%s: %.2f\n", userID, rate.Amount))
 	}
 
-	host := groupRate.Host
-	hostUser, err := h.userStore.ListUsers(context.Background(), userDomain.ListFilter{Names: []string{host}})
-	if err != nil {
-		log.Printf("Error getting host %s from storage: %v\n", host, err)
-	}
-	if len(hostUser) == 1 {
-		host = fmt.Sprintf("<@%s>", hostUser[0].TransportID)
+	host := groupRate.HostWoltUser
+	if groupRate.HostUser != nil {
+		host = fmt.Sprintf("<@%s>", groupRate.HostUser.TransportID)
 	}
 	sb.WriteString(fmt.Sprintf("\nPay to: %s\n", host))
 
-	if len(hostUser) == 1 && len(hostUser[0].PaymentPreferences) > 0 {
+	if groupRate.HostUser != nil && len(groupRate.HostUser.PaymentPreferences) > 0 {
 		sb.WriteString("Preferred payments methods (in order): ")
-		strPayments := make([]string, len(hostUser[0].PaymentPreferences))
-		for i, v := range hostUser[0].PaymentPreferences {
+		strPayments := make([]string, len(groupRate.HostUser.PaymentPreferences))
+		for i, v := range groupRate.HostUser.PaymentPreferences {
 			strPayments[i] = v.String()
 		}
 		sb.WriteString(strings.Join(strPayments, ", "))
@@ -217,122 +197,60 @@ func (h *Service) shouldHandleOrder() bool {
 	return true
 }
 
-func (h *Service) waitForGroupProgress(g *wolt.Group) error {
-	timeoutTime := time.Now().Add(h.cfg.TimeoutForReady)
-
-	details, err := g.Details()
+func (h *Service) saveOrderAsync(order *groupOrder, groupRate GroupRate, receiver string) {
+	domainOrder, err := order.ToOrder(groupRate.Rates, receiver)
 	if err != nil {
-		return fmt.Errorf("get group details: %w", err)
+		log.Printf("Error converting order %q: %v\n", order.id, err)
+		return
 	}
-	status, err := details.Status()
-	if err != nil {
-		return fmt.Errorf("get status from details: %w", err)
-	}
-
-	for status == wolt.StatusActive {
-		if time.Now().After(timeoutTime) {
-			return fmt.Errorf("timeout waiting for group to progress")
-		}
-		time.Sleep(h.cfg.WaitBetweenStatusCheck)
-
-		details, err = g.Details()
-		if err != nil {
-			return fmt.Errorf("get group details: %w", err)
-		}
-		status, err = details.Status()
-		if err != nil {
-			return fmt.Errorf("get status from details: %w", err)
-		}
+	if err = h.orderStore.SaveOrder(context.Background(), domainOrder); err != nil {
+		log.Printf("Error saving order %q: %v\n", order.id, err)
+		return
 	}
 
-	if status == wolt.StatusCanceled {
-		return fmt.Errorf("order canceled")
-	}
-
-	if status != wolt.StatusPendingTrans && status != wolt.StatusPurchased {
-		return fmt.Errorf("unknown order status: %s", status)
-	}
-
-	return nil
 }
 
-func (h *Service) calculateDeliveryRate(g *wolt.Group, details *wolt.OrderDetails) (int, error) {
-	venueDetails, err := g.VenueDetails()
+func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRate GroupRate, err error) {
+	order, err := h.joinGroupOrder(groupID)
 	if err != nil {
-		return 0, fmt.Errorf("get venue details: %w", err)
+		return GroupRate{}, fmt.Errorf("join group order: %w", err)
 	}
-
-	deliveryCoordinate, err := details.DeliveryCoordinate()
-	if err != nil {
-		return 0, fmt.Errorf("get delivery coordinate: %w", err)
-	}
-
-	deliveryPrice, err := venueDetails.CalculateDeliveryRate(deliveryCoordinate)
-	if err != nil {
-		return 0, fmt.Errorf("get delivery price: %w", err)
-	}
-
-	return deliveryPrice, nil
-}
-
-func (h *Service) getRateForGroup(receiver, groupID, messageID string) (GroupRate, error) {
-	g, err := wolt.NewGroupWithExistingID(wolt.WoltAddr{
-		BaseAddr:    h.cfg.WoltBaseAddr,
-		APIBaseAddr: h.cfg.WoltApiBaseAddr,
-	}, wolt.RetryConfig{
-		HTTPMaxRetries:       h.cfg.WoltHTTPMaxRetryCount,
-		HTTPMinRetryDuration: h.cfg.WoltHTTPMinRetryDuration,
-		HTTPMaxRetryDuration: h.cfg.WoltHTTPMaxRetryDuration,
-	}, groupID)
-	if err != nil {
-		return GroupRate{}, fmt.Errorf("new existing group: %w", err)
-	}
-
-	if err := g.Join(); err != nil {
-		return GroupRate{}, fmt.Errorf("join group: %w", err)
-	}
-
 	h.informEvent(receiver, fmt.Sprintf("Hey :) Just letting you know I joined the group %s", groupID), "", messageID)
 
-	if err := g.MarkAsReady(); err != nil {
+	defer func() {
+		go h.saveOrderAsync(order, groupRate, receiver)
+	}()
+
+	if err = order.MarkAsReady(); err != nil {
 		return GroupRate{}, fmt.Errorf("mark as ready in group: %w", err)
 	}
 
-	if err := h.waitForGroupProgress(g); err != nil {
-		return GroupRate{}, fmt.Errorf("wait for group to progress: %w", err)
+	ctx, cancel := context.WithTimeout(context.Background(), h.cfg.TimeoutForReady)
+	defer cancel()
+	if err = order.WaitUntilFinished(ctx, h.cfg.WaitBetweenStatusCheck); err != nil {
+		return GroupRate{}, fmt.Errorf("wait for group to finish: %w", err)
 	}
 
-	details, err := g.Details()
+	details, err := order.Details()
 	if err != nil {
-		return GroupRate{}, fmt.Errorf("get group details for calculating delivery: %w", err)
+		return GroupRate{}, fmt.Errorf("get group details for calculating rates: %w", err)
 	}
 
 	rates, err := details.RateByPerson()
 	if err != nil {
 		return GroupRate{}, fmt.Errorf("rate by person: %w", err)
 	}
-	host, err := details.Host()
-	if err != nil {
-		return GroupRate{}, fmt.Errorf("group host: %w", err)
-	}
 
-	groupRate := GroupRate{
-		Rates:        rates,
-		Host:         host,
-		DeliveryRate: 0,
-	}
-
-	deliveryRate, err := h.calculateDeliveryRate(g, details)
+	deliveryRate, err := order.CalculateDeliveryRate()
 	if err != nil {
 		h.informEvent(receiver, "I can't find the delivery rate, I'll publish the rates without including the delivery rate", "", messageID)
 		log.Println("Error getting delivery rate:", err)
-		return groupRate, nil
+		return h.buildGroupRates(rates, details.Host, 0), nil
 	}
-	groupRate.DeliveryRate = deliveryRate
 
 	pricePerPerson := float64(deliveryRate) / float64(len(rates))
 	for person, rate := range rates {
 		rates[person] = rate + pricePerPerson
 	}
-	return groupRate, nil
+	return h.buildGroupRates(rates, details.Host, deliveryRate), nil
 }
