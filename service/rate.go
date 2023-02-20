@@ -201,9 +201,11 @@ func (h *Service) saveOrderAsync(order *groupOrder, groupRate GroupRate, receive
 	domainOrder, err := order.ToOrder(groupRate.Rates, receiver)
 	if err != nil {
 		log.Printf("Error converting order %q: %v\n", order.id, err)
+		return
 	}
 	if err = h.orderStore.SaveOrder(context.Background(), domainOrder); err != nil {
 		log.Printf("Error saving order %q: %v\n", order.id, err)
+		return
 	}
 
 }

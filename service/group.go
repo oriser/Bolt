@@ -45,7 +45,7 @@ type groupOrder struct {
 func (g *groupOrder) fetchDetails() (*wolt.OrderDetails, error) {
 	details, err := g.woltGroup.Details()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get order details: %w", err)
 	}
 	g.details = details
 	return details, nil
