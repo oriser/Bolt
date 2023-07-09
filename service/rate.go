@@ -154,7 +154,7 @@ func (h *Service) buildRatesMessage(groupRate GroupRate, groupID string) string 
 	for _, rate := range groupRate.Rates {
 		userID := rate.WoltName
 		if rate.User != nil {
-			userID = fmt.Sprintf("<@%s>", rate.User.TransportID)
+			userID = fmt.Sprintf("<@%s> (%s)", rate.User.TransportID, rate.WoltName)
 		}
 
 		sb.WriteString(fmt.Sprintf("%s: %.2f\n", userID, rate.Amount))
