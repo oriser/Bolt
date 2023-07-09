@@ -316,7 +316,7 @@ func buildRatesMessage(t *testing.T, order *woltserver.Order, expectedDelivery i
 
 		name := rate.WoltName
 		if id, ok := participantIDsMapping[rate.WoltName]; ok {
-			name = fmt.Sprintf("<@%s>", id)
+			name = fmt.Sprintf("<@%s> (%s)", id, rate.WoltName)
 		}
 		ratesStringBuilder.WriteString(fmt.Sprintf("%s: %.2f\n", name, rate.Amount))
 	}
