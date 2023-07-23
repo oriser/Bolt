@@ -95,18 +95,17 @@ func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID s
 		return true
 	}
 
-	messageSent := true
 	messageID, err := h.eventNotification.SendMessage(receiver, event, initialMessageID)
 	if err != nil {
 		log.Printf("Error informing event to receiver %q: %v\n", receiver, err)
-		messageSent = false
+		return false
 	}
 
 	if reactionEmoji == "" {
-		return messageSent
+		return true
 	}
 	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
 		log.Printf("Error adding reaction to message ID %s:%v\n", messageID, err)
 	}
-	return messageSent
+	return true
 }
