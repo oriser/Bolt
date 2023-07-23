@@ -611,6 +611,20 @@ func TestSlackPurchaseGroup(t *testing.T) {
 				"Arngrim": {Name: "Arngrim"},
 			},
 		},
+		{
+			name:         "Similar names",
+			participants: map[string][]int{"Lorem": {10}},
+			participantsToAddToSlack: map[string]customslack.SlackUser{
+				"Lorem": {Name: "Lorem Ipsum", Timezone: findValidTimezone(t)},
+			},
+			customUsersToAddToSlack: []customslack.SlackUser{
+				{
+					Name: "Alorem Bar",
+				},
+			},
+			addHostToSlack: true,
+			host:           "Ori",
+		},
 	}
 	for _, tc := range tests {
 		tc := tc

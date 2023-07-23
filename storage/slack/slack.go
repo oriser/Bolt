@@ -86,20 +86,64 @@ func (s *SlackStorage) getFromCache(name string) *userDomain.User {
 	return entry.user
 }
 
+// firstName returns the first name of the user. If the user doesn't have first name, it will try to split the full name and take the first part
+func (s *SlackStorage) firstName(user slack.User) string {
+	if user.Profile.FirstName != "" {
+		return user.Profile.FirstName
+	}
+	splitted := strings.Split(user.Profile.RealNameNormalized, " ")
+	if len(splitted) > 0 {
+		return splitted[0]
+	}
+	return ""
+}
+
+// lastName returns the last name of the user. If the user doesn't have last name, it will try to split the full name and take all parts except the first one
+func (s *SlackStorage) lastName(user slack.User) string {
+	if user.Profile.LastName != "" {
+		return user.Profile.LastName
+	}
+	splitted := strings.Split(user.Profile.RealNameNormalized, " ")
+	if len(splitted) > 1 {
+		return strings.Join(splitted[1:], " ")
+	}
+	return ""
+}
+
 // findMatchedUsers find matching users names from Slack users list by fuzzy search them
 func (s *SlackStorage) findMatchedUsers(searchFor string, users []slack.User) ([]*MatchUser, error) {
-	searchedValues := make([]string, len(users))
-	searchedValueToUser := make(map[string]slack.User)
-	for i, user := range users {
-		searchedValues[i] = user.Profile.RealNameNormalized
-		searchedValueToUser[user.Profile.RealNameNormalized] = user
+	bufferLength := len(users)
+	justFirstOrLast := len(strings.Split(searchFor, " ")) == 1
+	if justFirstOrLast {
+		bufferLength = bufferLength * 3
 	}
 
-	fuzzyFunc := fuzzy.Ratio
-	if len(strings.Split(searchFor, " ")) == 1 {
-		// If just first\last name use the WRation which knows how to handle partial
-		fuzzyFunc = fuzzy.WRatio
+	searchedValues := make([]string, 0, bufferLength)
+	searchedValueToUser := make(map[string]slack.User, bufferLength)
+
+	for _, user := range users {
+		if user.Deleted {
+			// Skip deleted users
+			continue
+		}
+		searchedValues = append(searchedValues, user.Profile.RealNameNormalized)
+		searchedValueToUser[user.Profile.RealNameNormalized] = user
+		if justFirstOrLast {
+			firstName := s.firstName(user)
+			if _, exists := searchedValueToUser[firstName]; !exists && firstName != "" {
+				searchedValues = append(searchedValues, firstName)
+				searchedValueToUser[firstName] = user
+			}
+
+			lastName := s.lastName(user)
+			if _, exists := searchedValueToUser[lastName]; !exists && lastName != "" {
+				searchedValues = append(searchedValues, lastName)
+				searchedValueToUser[lastName] = user
+			}
+		}
 	}
+
+	fuzzyFunc := fuzzy.UQRatio
 
 	findings, err := fuzzy.Extract(searchFor, searchedValues, FuzzyLimit, FuzzyMinimumScore, fuzzyFunc)
 	if err != nil {
@@ -230,10 +274,6 @@ func (s *SlackStorage) ListUsers(ctx context.Context, filter userDomain.ListFilt
 	}
 
 	for name, matchedUser := range findings {
-		if matchedUser.User.Deleted {
-			// Ignore deleted users
-			continue
-		}
 		user := s.slackUserToUser(matchedUser.User)
 		s.saveCache(name, user)
 		ret = append(ret, user)
