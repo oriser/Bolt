@@ -362,6 +362,10 @@ func validateDebts(t *testing.T,
 	willRemainDebts := make([]string, 0)
 
 	for participant, slackUser := range slackUsers {
+		if slackUser.Deleted {
+			// Deleted account will not get a message
+			continue
+		}
 		if isOutsideWorkingHours(t, slackUser.Timezone) {
 			// If the user is not currently in debts sending timezone, it won't get a message and its debts will remain after the debts timeout
 			willRemainDebts = append(willRemainDebts, participant)
@@ -544,6 +548,16 @@ func TestSlackPurchaseGroup(t *testing.T) {
 			host:           "Ori",
 		},
 		{
+			name:         "Users exists in slack, one is deleted",
+			participants: map[string][]int{"Biga": {10}, "Nori": {13, 40}},
+			participantsToAddToSlack: map[string]customslack.SlackUser{
+				"Biga": {Name: "Biga", Timezone: findValidTimezone(t), Deleted: true},
+				"Nori": {Name: "Nori", Timezone: findValidTimezone(t)},
+			},
+			addHostToSlack: true,
+			host:           "Ori",
+		},
+		{
 			name:         "Cancel debts",
 			participants: map[string][]int{"Idunn": {10}, "Búri": {13, 40}},
 			participantsToAddToSlack: map[string]customslack.SlackUser{
@@ -649,7 +663,11 @@ func TestSlackPurchaseGroup(t *testing.T) {
 			participantIDsMapping := make(map[string]string)
 			for participantName, slackUser := range tc.participantsToAddToSlack {
 				require.Contains(t, tc.participants, participantName, "participant %v in slack mapping doesn't exist in participants", participantName)
-				participantIDsMapping[participantName] = tdata.customSlack.AddSlackUser(slackUser)
+				id := tdata.customSlack.AddSlackUser(slackUser)
+				// Add the deleted users to Slack, but avoid counting them as expected participants
+				if !slackUser.Deleted {
+					participantIDsMapping[participantName] = id
+				}
 			}
 
 			order, err := tdata.woltServer.GetOrder(orderID)

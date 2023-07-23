@@ -230,6 +230,10 @@ func (s *SlackStorage) ListUsers(ctx context.Context, filter userDomain.ListFilt
 	}
 
 	for name, matchedUser := range findings {
+		if matchedUser.User.Deleted {
+			// Ignore deleted users
+			continue
+		}
 		user := s.slackUserToUser(matchedUser.User)
 		s.saveCache(name, user)
 		ret = append(ret, user)

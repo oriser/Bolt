@@ -25,6 +25,7 @@ type SlackUser struct {
 	Email    string
 	Phone    string
 	Timezone string
+	Deleted  bool
 }
 
 type SlackCustomize func(customize slacktest.Customize)
@@ -80,7 +81,7 @@ func (h *Handlers) AddSlackUser(user SlackUser) string {
 	member := slack.User{
 		ID:       id,
 		Name:     user.Name,
-		Deleted:  false,
+		Deleted:  user.Deleted,
 		RealName: user.Name,
 		TZ:       user.Timezone,
 		Profile: slack.UserProfile{
@@ -89,6 +90,7 @@ func (h *Handlers) AddSlackUser(user SlackUser) string {
 			Phone:              user.Phone,
 		},
 	}
+
 	h.Members = append(h.Members, member)
 	h.membersMap[id] = member
 	h.membersIDs[user.Name] = id
