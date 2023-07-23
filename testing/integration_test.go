@@ -57,7 +57,7 @@ const (
 )
 
 const (
-	HelloPattern = `Hey :) Just letting you know I joined the group %s`
+	HelloPattern = `Hello! I'm about to join group order %s`
 )
 
 var timezones = []string{
