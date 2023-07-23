@@ -90,21 +90,22 @@ func New(cfg Config, userStore user.Store, debtStore debt.Store, orderStore orde
 	}, nil
 }
 
-func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) {
+func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) bool {
 	if h.eventNotification == nil {
-		return
+		return true
 	}
 
 	messageID, err := h.eventNotification.SendMessage(receiver, event, initialMessageID)
 	if err != nil {
 		log.Printf("Error informing event to receiver %q: %v\n", receiver, err)
-		return
+		return false
 	}
 
 	if reactionEmoji == "" {
-		return
+		return true
 	}
 	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
 		log.Printf("Error adding reaction to message ID %s:%v\n", messageID, err)
 	}
+	return true
 }

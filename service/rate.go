@@ -15,6 +15,8 @@ import (
 
 var groupLinkRe = regroup.MustCompile(`\/group\/(?P<id>[A-Z0-9]+?)($|\/$)`)
 
+var errWontJoin = errors.New("wont join because the channel is not accessible")
+
 const (
 	MarkAsPaidReaction = "money_mouth_face"
 	HostRemoveDebts    = "x"
@@ -211,11 +213,14 @@ func (h *Service) saveOrderAsync(order *groupOrder, groupRate GroupRate, receive
 }
 
 func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRate GroupRate, err error) {
+	if !h.informEvent(receiver, fmt.Sprintf("Hello! I'm about to join group order %s", groupID), "", messageID) {
+		return GroupRate{}, errWontJoin
+	}
 	order, err := h.joinGroupOrder(groupID)
 	if err != nil {
+		h.informEvent(receiver, "I had an error joining the order", "", messageID)
 		return GroupRate{}, fmt.Errorf("join group order: %w", err)
 	}
-	h.informEvent(receiver, fmt.Sprintf("Hey :) Just letting you know I joined the group %s", groupID), "", messageID)
 
 	defer func() {
 		go h.saveOrderAsync(order, groupRate, receiver)
