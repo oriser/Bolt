@@ -260,12 +260,7 @@ func (g *Group) Details() (*OrderDetails, error) {
 	return ParseOrderDetails(output)
 }
 
-func (g *Group) VenueDetails() (*Venue, error) {
-	details, err := g.Details()
-	if err != nil {
-		return nil, fmt.Errorf("get group details: %w", err)
-	}
-
+func (g *Group) VenueDetails(details *OrderDetails) (*Venue, error) {
 	req, err := g.prepareReq("GET", g.joinApiAddr(fmt.Sprintf("/v3/venues/%s", details.Details.VenueID)), nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("prepare venue request: %w", err)

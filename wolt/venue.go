@@ -23,9 +23,10 @@ type Venue struct {
 	DeliverySpecs struct {
 		DeliveryPricing PriceRanges `json:"delivery_pricing"`
 	} `json:"delivery_specs"`
-	Names []VenueName `json:"name"`
-	Link  string      `json:"public_url"`
-	City  string      `json:"city"`
+	Names  []VenueName `json:"name"`
+	Link   string      `json:"public_url"`
+	City   string      `json:"city"`
+	Online bool        `json:"online"`
 
 	Name             string
 	ParsedCoordinate Coordinate `json:"-"`
