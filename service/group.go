@@ -52,7 +52,12 @@ func (g *groupOrder) fetchDetails() (*wolt.OrderDetails, error) {
 }
 
 func (g *groupOrder) fetchVenue() (*wolt.Venue, error) {
-	venue, err := g.woltGroup.VenueDetails()
+	details, err := g.fetchDetails()
+	if err != nil {
+		return nil, fmt.Errorf("get group details: %w", err)
+	}
+
+	venue, err := g.woltGroup.VenueDetails(details)
 	if err != nil {
 		return nil, fmt.Errorf("get venue details: %w", err)
 	}
