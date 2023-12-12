@@ -66,7 +66,7 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 
 	groupRate, err := h.getRateForGroup(req.Channel, groupID.ID, req.MessageID)
 	if err != nil {
-		if errors.Is(err, errWontJoin) {
+		if errors.Is(err, errNotInTime) {
 			return "", nil
 		}
 		if strings.Contains(err.Error(), "order canceled") {
