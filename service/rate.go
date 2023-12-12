@@ -16,6 +16,7 @@ import (
 var groupLinkRe = regroup.MustCompile(`\/group\/(?P<id>[A-Z0-9]+?)($|\/$)`)
 
 var errWontJoin = errors.New("wont join because the channel is not accessible")
+var errNotInTime = errors.New("order not in tracking time")
 
 const (
 	MarkAsPaidReaction = "money_mouth_face"
@@ -63,13 +64,11 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 	h.currentlyWorkingOrders.Store(groupID.ID, true)
 	defer h.currentlyWorkingOrders.Delete(groupID.ID)
 
-	if !h.shouldHandleOrder() {
-		h.informEvent(req.Channel, "It's too late for me.. I won't join this order :sleeping:", "", req.MessageID)
-		return "", nil
-	}
-
 	groupRate, err := h.getRateForGroup(req.Channel, groupID.ID, req.MessageID)
 	if err != nil {
+		if errors.Is(err, errWontJoin) {
+			return "", nil
+		}
 		if strings.Contains(err.Error(), "order canceled") {
 			h.informEvent(req.Channel, fmt.Sprintf("Order for group ID %s was canceled", groupID.ID), "", req.MessageID)
 			return "", nil
@@ -213,7 +212,13 @@ func (h *Service) saveOrderAsync(order *groupOrder, groupRate GroupRate, receive
 }
 
 func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRate GroupRate, err error) {
-	if !h.informEvent(receiver, fmt.Sprintf("Hello! I'm about to join group order %s", groupID), "", messageID) {
+	shouldHandleOrder := h.shouldHandleOrder()
+
+	msg := fmt.Sprintf("Hello! I'm about to join group order %s", groupID)
+	if !shouldHandleOrder {
+		msg = fmt.Sprintf("%s. But it's too late for me.. I won't track prices for this order :sleeping:", msg)
+	}
+	if !h.informEvent(receiver, msg, "", messageID) {
 		return GroupRate{}, errWontJoin
 	}
 	order, err := h.joinGroupOrder(groupID)
@@ -240,6 +245,10 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRat
 		return GroupRate{}, fmt.Errorf("wait for group to finish: %w", err)
 	}
 	monitorCancel()
+
+	if !shouldHandleOrder {
+		return GroupRate{}, errNotInTime
+	}
 
 	details, err := order.Details()
 	if err != nil {
