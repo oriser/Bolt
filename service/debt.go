@@ -58,7 +58,7 @@ func (h *Service) HandleReactionAdded(req ReactionAddRequest) (string, error) {
 			return "", nil
 		}
 		if hostUser.TransportID != req.FromUserID {
-			h.informEvent(req.FromUserID, fmt.Sprintf("Nice try :stuck_out_tongue_winking_eye: Only the host (<@%s>) can cancel debts for this order", hostForOrder), "", "")
+			_, _ = h.informEvent(req.FromUserID, fmt.Sprintf("Nice try :stuck_out_tongue_winking_eye: Only the host (<@%s>) can cancel debts for this order", hostForOrder), "", "")
 			return "", nil
 		}
 		if err := h.removeAllDebtsForOrder(parsedID.ID, "the host requested to cancel debts tracking"); err != nil {
@@ -122,7 +122,7 @@ func (h *Service) remindDebt(debt *debtDomain.Debt) error {
 		return nil
 	}
 
-	h.informEvent(borrower.TransportID,
+	_, _ = h.informEvent(borrower.TransportID,
 		fmt.Sprintf("Reminder, you should pay %.2f nis to <@%s> for Wolt order ID %s.\n"+
 			"If you paid, you can mark yourself as paid by adding :%s: reaction to this message \\ the original rates message.",
 			debt.Amount, debt.LenderID, debt.OrderID, MarkAsPaidReaction),
@@ -149,11 +149,11 @@ func (h *Service) addDebts(initiatedTransport, orderID string, rates GroupRate, 
 	}
 
 	if rates.HostUser == nil {
-		h.informEvent(initiatedTransport, fmt.Sprintf("I didn't find the user of the host (%s), I won't track debts for order %s", rates.HostWoltUser, orderID), "", messageID)
+		_, _ = h.informEvent(initiatedTransport, fmt.Sprintf("I didn't find the user of the host (%s), I won't track debts for order %s", rates.HostWoltUser, orderID), "", messageID)
 		return nil
 	}
 
-	h.informEvent(initiatedTransport,
+	_, _ = h.informEvent(initiatedTransport,
 		fmt.Sprintf("I'll keep reminding you to pay, when you pay you can react with :%s: to the rates message and I'll stop bothering you.\n"+
 			"<@%s>, as the host, you can react with :%s: to the rates message to cancel debts tracking for Wolt order ID %s",
 			MarkAsPaidReaction, rates.HostUser.TransportID, HostRemoveDebts, orderID),
@@ -166,7 +166,7 @@ func (h *Service) addDebts(initiatedTransport, orderID string, rates GroupRate, 
 		}
 
 		if rate.User == nil {
-			h.informEvent(initiatedTransport, fmt.Sprintf("I won't track %q payment because I can't find his user.", rate.WoltName), "", messageID)
+			_, _ = h.informEvent(initiatedTransport, fmt.Sprintf("I won't track %q payment because I can't find his user.", rate.WoltName), "", messageID)
 			continue
 		}
 		if err := h.createDebt(rate.Amount, initiatedTransport, orderID, messageID, rate.User, rates.HostUser); err != nil {
@@ -213,7 +213,7 @@ func (h *Service) removeAllDebtsForOrder(orderID, reason string) error {
 		}
 	}
 
-	h.informEvent(lender, fmt.Sprintf("I removed all debts for order ID %s because %s", orderID, reason), "", "")
+	_, _ = h.informEvent(lender, fmt.Sprintf("I removed all debts for order ID %s because %s", orderID, reason), "", "")
 	return nil
 }
 
@@ -245,7 +245,7 @@ func (h *Service) markDebtAsPaid(orderID, reactedTransportID, initialChannel str
 			return fmt.Errorf("remove debt: %w", err)
 		}
 
-		h.informEvent(borrower.TransportID, fmt.Sprintf("OK! I removed your debt for order %s", debt.OrderID), "", "")
+		_, _ = h.informEvent(borrower.TransportID, fmt.Sprintf("OK! I removed your debt for order %s", debt.OrderID), "", "")
 
 		// Notify in the initial channel of the wolt link message in case we will get error getting the host details
 		recipient := initialChannel
@@ -258,7 +258,7 @@ func (h *Service) markDebtAsPaid(orderID, reactedTransportID, initialChannel str
 			messageID = ""
 		}
 
-		h.informEvent(recipient, fmt.Sprintf("<@%s> marked himself as paid for order ID %s", borrower.TransportID, debt.OrderID), "", messageID)
+		_, _ = h.informEvent(recipient, fmt.Sprintf("<@%s> marked himself as paid for order ID %s", borrower.TransportID, debt.OrderID), "", messageID)
 		return nil
 	}
 

@@ -61,7 +61,7 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 		log.Println("Already working on order", groupID.ID)
 		return "", nil
 	}
-	h.currentlyWorkingOrders.Store(groupID.ID, true)
+	h.currentlyWorkingOrders.Store(groupID.ID, nil)
 	defer h.currentlyWorkingOrders.Delete(groupID.ID)
 
 	groupRate, err := h.getRateForGroup(req.Channel, groupID.ID, req.MessageID)
@@ -70,21 +70,40 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 			return "", nil
 		}
 		if strings.Contains(err.Error(), "order canceled") {
-			h.informEvent(req.Channel, fmt.Sprintf("Order for group ID %s was canceled", groupID.ID), "", req.MessageID)
+			_, _ = h.informEvent(req.Channel, fmt.Sprintf("Order for group ID %s was canceled", groupID.ID), "", req.MessageID)
 			return "", nil
 		}
 		log.Printf("Error getting rate for group %s: %v\n", groupID.ID, err)
-		h.informEvent(req.Channel, fmt.Sprintf("I had an error getting rate for group ID %s", groupID.ID), "", req.MessageID)
+		_, _ = h.informEvent(req.Channel, fmt.Sprintf("I had an error getting rate for group ID %s", groupID.ID), "", req.MessageID)
 		return "", nil
 	}
 
+	order, ok := h.currentlyWorkingOrders.Load(groupID.ID)
+	if !ok || order == nil {
+		return "", fmt.Errorf("order %s not initialized in map", groupID.ID)
+	}
+
 	ratesMessage := h.buildRatesMessage(groupRate, groupID.ID)
-	h.informEvent(req.Channel, ratesMessage, MarkAsPaidReaction, req.MessageID)
+	order.(*groupOrder).detailsMessageId, err = h.informEvent(req.Channel, ratesMessage, MarkAsPaidReaction, req.MessageID)
+	if err != nil {
+		return "", fmt.Errorf("failed sending details message: %w", err)
+	}
 
 	if err := h.addDebts(req.Channel, groupID.ID, groupRate, req.MessageID); err != nil {
 		log.Println(fmt.Sprintf("Error adding debts: %s", err.Error()))
-		h.informEvent(req.Channel, "I had an error adding debts, I won't track this order", "", req.MessageID)
+		_, _ = h.informEvent(req.Channel, "I had an error adding debts, I won't track this order", "", req.MessageID)
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), h.cfg.OrderDoneTimeout)
+	defer cancel()
+	if err = h.monitorDelivery(req.Channel, order.(*groupOrder), ctx, h.cfg.WaitBetweenStatusCheck, req.MessageID, ratesMessage); err != nil {
+		if strings.Contains(err.Error(), "context canceled while waiting") {
+			_, _ = h.informEvent(req.Channel, fmt.Sprintf("Timed out waiting for order to be done"), "", req.MessageID)
+			return "", nil
+		}
+		return "", fmt.Errorf("error in waiting for order to finish: %w", err)
+	}
+
 	return "", nil
 }
 
@@ -218,14 +237,15 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRat
 	if !shouldHandleOrder {
 		msg = fmt.Sprintf("%s. But it's too late for me.. I won't track prices for this order :sleeping:", msg)
 	}
-	if !h.informEvent(receiver, msg, "", messageID) {
+	if _, err := h.informEvent(receiver, msg, "", messageID); err != nil {
 		return GroupRate{}, errWontJoin
 	}
 	order, err := h.joinGroupOrder(groupID)
 	if err != nil {
-		h.informEvent(receiver, "I had an error joining the order", "", messageID)
+		_, _ = h.informEvent(receiver, "I had an error joining the order", "", messageID)
 		return GroupRate{}, fmt.Errorf("join group order: %w", err)
 	}
+	h.currentlyWorkingOrders.Store(groupID, order)
 
 	defer func() {
 		go h.saveOrderAsync(order, groupRate, receiver)
@@ -240,7 +260,7 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRat
 
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 	go h.monitorVenue(monitorCtx, order, receiver, messageID)
-	if err = order.WaitUntilFinished(ctx, h.cfg.WaitBetweenStatusCheck); err != nil {
+	if err = h.WaitUntilFinished(order, ctx); err != nil {
 		monitorCancel()
 		return GroupRate{}, fmt.Errorf("wait for group to finish: %w", err)
 	}
@@ -262,7 +282,7 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRat
 
 	deliveryRate, err := order.CalculateDeliveryRate()
 	if err != nil {
-		h.informEvent(receiver, "I can't find the delivery rate, I'll publish the rates without including the delivery rate", "", messageID)
+		_, _ = h.informEvent(receiver, "I can't find the delivery rate, I'll publish the rates without including the delivery rate", "", messageID)
 		log.Println("Error getting delivery rate:", err)
 		return h.buildGroupRates(rates, details.Host, 0), nil
 	}
@@ -297,12 +317,12 @@ func (h *Service) monitorVenue(ctx context.Context, order *groupOrder, receiver,
 			}
 
 			if !venue.Online && online {
-				h.informEvent(receiver, ":red_circle: Pay attention. The venue went offline :(", "", initialMessageID)
+				_, _ = h.informEvent(receiver, ":red_circle: Pay attention. The venue went offline :(", "", initialMessageID)
 				online = false
 			}
 
 			if venue.Online && !online {
-				h.informEvent(receiver, ":large_green_circle: The venue is back online :)", "", initialMessageID)
+				_, _ = h.informEvent(receiver, ":large_green_circle: The venue is back online :)", "", initialMessageID)
 				online = true
 			}
 

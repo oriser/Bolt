@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"time"
 )
 
 const (
@@ -23,13 +24,15 @@ type Venue struct {
 	DeliverySpecs struct {
 		DeliveryPricing PriceRanges `json:"delivery_pricing"`
 	} `json:"delivery_specs"`
-	Names  []VenueName `json:"name"`
-	Link   string      `json:"public_url"`
-	City   string      `json:"city"`
-	Online bool        `json:"online"`
+	Names    []VenueName `json:"name"`
+	Link     string      `json:"public_url"`
+	City     string      `json:"city"`
+	Timezone string      `json:"timezone"`
+	Online   bool        `json:"online"`
 
 	Name             string
-	ParsedCoordinate Coordinate `json:"-"`
+	ParsedCoordinate Coordinate     `json:"-"`
+	TimezoneLocation *time.Location `json:"-"`
 }
 
 type Coordinate struct {
@@ -65,6 +68,11 @@ func ParseVenue(venuesJSON []byte) (*Venue, error) {
 	v.ParsedCoordinate, err = CoordinateFromArray(v.Location.Coordinates)
 	if err != nil {
 		return nil, fmt.Errorf("venue coordinate from array: %w", err)
+	}
+
+	v.TimezoneLocation, err = time.LoadLocation(v.Timezone)
+	if err != nil {
+		return nil, fmt.Errorf("unexpected venue timezone: %w", err)
 	}
 
 	for _, name := range v.Names {

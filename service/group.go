@@ -34,12 +34,13 @@ func (h *Service) joinGroupOrder(groupID string) (*groupOrder, error) {
 }
 
 type groupOrder struct {
-	id            string
-	deliveryPrice int
-	woltGroup     *wolt.Group
-	markedAsReady bool
-	details       *wolt.OrderDetails
-	venue         *wolt.Venue
+	id               string
+	deliveryPrice    int
+	woltGroup        *wolt.Group
+	markedAsReady    bool
+	details          *wolt.OrderDetails
+	venue            *wolt.Venue
+	detailsMessageId string
 }
 
 func (g *groupOrder) fetchDetails() (*wolt.OrderDetails, error) {
@@ -73,16 +74,16 @@ func (g *groupOrder) MarkAsReady() error {
 	return nil
 }
 
-func (g *groupOrder) WaitUntilFinished(ctx context.Context, waitBetweenStatusCheck time.Duration) error {
-	details, err := g.fetchDetails()
+func (h *Service) WaitUntilFinished(order *groupOrder, ctx context.Context) error {
+	details, err := order.fetchDetails()
 	if err != nil {
 		return fmt.Errorf("get group details: %w", err)
 	}
 
 	for details.Status == wolt.StatusActive {
 		select {
-		case <-time.After(waitBetweenStatusCheck):
-			details, err = g.fetchDetails()
+		case <-time.After(h.cfg.WaitBetweenStatusCheck):
+			details, err = order.fetchDetails()
 			if err != nil {
 				return fmt.Errorf("get group details: %w", err)
 			}
