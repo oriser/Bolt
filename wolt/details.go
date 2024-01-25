@@ -160,3 +160,7 @@ func (o *OrderDetails) RateByPerson() (map[string]float64, error) {
 
 	return output, nil
 }
+
+func (o *OrderDetails) IsDelivered() bool {
+	return o.Purchase.DeliveryStatus == DeliveryStatusDelivered
+}

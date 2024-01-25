@@ -64,13 +64,13 @@ func (h *Service) monitorDelivery(initiatedTransport string, order *groupOrder, 
 			}
 
 			timeToDelivery := details.DeliveryEta.Sub(time.Now())
-			if !getReadyMessageSent && timeToDelivery < h.cfg.TimeTillGetReadyMessage {
+			if !getReadyMessageSent && !details.IsDelivered() && timeToDelivery < h.cfg.TimeTillGetReadyMessage {
 				_, _ = h.informEvent(initiatedTransport, "Get ready, delivery coming soon", "", messageID)
 				getReadyMessageSent = true
 			}
 		}
 
-		if details.Purchase.DeliveryStatus == wolt.DeliveryStatusDelivered {
+		if details.IsDelivered() {
 			if !getReadyMessageSent {
 				_, _ = h.informEvent(initiatedTransport, "Delivery arrived", "", messageID)
 				getReadyMessageSent = true
