@@ -78,8 +78,8 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 		return "", nil
 	}
 
-	order, ok := h.currentlyWorkingOrders.Load(groupID.ID)
-	if !ok || order == nil {
+	order, _ := h.currentlyWorkingOrders.Load(groupID.ID)
+	if order == nil {
 		return "", fmt.Errorf("order %s not initialized in map", groupID.ID)
 	}
 
