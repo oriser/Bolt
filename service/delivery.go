@@ -22,12 +22,16 @@ func (h *Service) buildProgressEmojiArt(startedAt time.Time, deliveryEta time.Ti
 
 	var sb strings.Builder
 
+	// Use Slack's date formatting to display times at the recipient's timezone
+	deliveryEtaString := fmt.Sprintf("`<!date^%d^{time}|%s>`", deliveryEta.Unix(), deliveryEta.In(timezone).Format("15:04"))
+	startedAtString := fmt.Sprintf("`<!date^%d^{time}|%s>`", startedAt.Unix(), startedAt.In(timezone).Format("15:04"))
+
 	// Due to Slack emoji constraints, the courier advances from right (venue) to left (destination)
 	firstLine := fmt.Sprintf(
 		"`%s`%s`%s`",
-		deliveryEta.In(timezone).Format("15:04"),
+		deliveryEtaString,
 		strings.Repeat(" ", numberOfSpacesBetweenTimes),
-		startedAt.In(timezone).Format("15:04"))
+		startedAtString)
 	sb.WriteString(firstLine + "\n")
 
 	deliveryPercentage := time.Now().Sub(startedAt).Seconds() / deliveryEta.Sub(startedAt).Seconds()
