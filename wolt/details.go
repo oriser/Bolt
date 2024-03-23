@@ -55,7 +55,15 @@ func (deliveryStatusLog *DeliveryStatusToTimeMap) UnmarshalJSON(bytes []byte) er
 
 	res := make(DeliveryStatusToTimeMap)
 	for _, entry := range *o {
-		res[entry.Status] = time.UnixMilli(entry.Datetime.DateUnix)
+		if entry.Datetime.DateUnix == 0 || entry.Status == "" {
+			return fmt.Errorf("error parsing delivery status log entry %w", err)
+		}
+
+		currentEntryTime := time.UnixMilli(entry.Datetime.DateUnix)
+		// Duplicate statuses shouldn't occur, but if they do, we take their latest timestamp
+		if existingTime, exists := res[entry.Status]; !exists || currentEntryTime.After(existingTime) {
+			res[entry.Status] = currentEntryTime
+		}
 	}
 	*deliveryStatusLog = res
 

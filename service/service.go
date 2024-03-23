@@ -107,7 +107,7 @@ func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID s
 		return messageID, nil
 	}
 	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
-		return messageID, fmt.Errorf("error adding reaction to message %s: %v\n", messageID, err)
+		return messageID, fmt.Errorf("error adding reaction to message %s: %w\n", messageID, err)
 	}
 
 	return messageID, nil
