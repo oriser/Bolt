@@ -24,6 +24,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Run reviewdog golangci-lint
-        uses: reviewdog/action-golangci-lint@v2
+        uses: reviewdog/action-golangci-lint@v1
         with:
           github_token: ${{ secrets.github_token }}
