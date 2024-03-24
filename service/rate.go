@@ -98,7 +98,7 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 	defer cancel()
 	if err = h.monitorDelivery(req.Channel, order.(*groupOrder), ctx, h.cfg.WaitBetweenStatusCheck, req.MessageID, ratesMessage); err != nil {
 		if strings.Contains(err.Error(), "context canceled while waiting") {
-			_, _ = h.informEvent(req.Channel, fmt.Sprintf("Timed out waiting for order to be done"), "", req.MessageID)
+			_, _ = h.informEvent(req.Channel, "Timed out waiting for order to be done", "", req.MessageID)
 			return "", nil
 		}
 		return "", fmt.Errorf("error in waiting for order to finish: %w", err)

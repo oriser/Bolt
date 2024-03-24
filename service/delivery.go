@@ -34,7 +34,7 @@ func (h *Service) buildProgressEmojiArt(startedAt time.Time, deliveryEta time.Ti
 		startedAtString)
 	sb.WriteString(firstLine + "\n")
 
-	deliveryPercentage := time.Now().Sub(startedAt).Seconds() / deliveryEta.Sub(startedAt).Seconds()
+	deliveryPercentage := time.Since(startedAt).Seconds() / deliveryEta.Sub(startedAt).Seconds()
 	numberOfRoadTilesBehindCourier := int(math.Round(deliveryPercentage * numberOfRoadTiles))
 	secondLine := strings.Repeat(" ", numberOfSpacesBeforeDestinationEmoji) +
 		fmt.Sprintf(":%s:", h.cfg.OrderDestinationEmoji) +
@@ -99,7 +99,7 @@ func (h *Service) monitorDelivery(initiatedTransport string, order *groupOrder, 
 			}
 			return nil
 		} else if !details.DeliveryEta.Equal(time.Unix(0, 0)) {
-			timeToDelivery := details.DeliveryEta.Sub(time.Now())
+			timeToDelivery := time.Until(details.DeliveryEta)
 			if !getReadyMessageSent && timeToDelivery < h.cfg.TimeTillGetReadyMessage {
 				_, _ = h.informEvent(initiatedTransport, "Get ready, delivery coming soon", "", messageID)
 				getReadyMessageSent = true
