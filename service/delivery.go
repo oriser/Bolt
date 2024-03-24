@@ -102,7 +102,7 @@ func (h *Service) monitorDelivery(initiatedTransport string, order *groupOrder, 
 			timeToDelivery := time.Until(details.DeliveryEta)
 			if !getReadyMessageSent && timeToDelivery < h.cfg.TimeTillGetReadyMessage {
 				_, _ = h.informEvent(initiatedTransport, "Get ready, delivery coming soon", "", messageID)
-				getReadyMessageSent = true
+				getReadyMessageSent = true //nolint:ineffassign
 			}
 		}
 
