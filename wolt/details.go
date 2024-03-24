@@ -37,6 +37,38 @@ func (p *Participant) Name() string {
 }
 
 type Status string
+type DeliveryStatus string
+type DeliveryStatusToTimeMap map[DeliveryStatus]time.Time
+
+func (deliveryStatusLog *DeliveryStatusToTimeMap) UnmarshalJSON(bytes []byte) error {
+	o := &([]struct {
+		Datetime struct {
+			DateUnix int64 `json:"$date"`
+		} `json:"datetime"`
+		Status DeliveryStatus `json:"status"`
+	}{})
+
+	err := json.Unmarshal(bytes, o)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling DeliveryStatusToTimeMap %w", err)
+	}
+
+	res := make(DeliveryStatusToTimeMap)
+	for _, entry := range *o {
+		if entry.Datetime.DateUnix == 0 || entry.Status == "" {
+			return fmt.Errorf("error parsing delivery status log entry %w", err)
+		}
+
+		currentEntryTime := time.UnixMilli(entry.Datetime.DateUnix)
+		// Duplicate statuses shouldn't occur, but if they do, we take their latest timestamp
+		if existingTime, exists := res[entry.Status]; !exists || currentEntryTime.After(existingTime) {
+			res[entry.Status] = currentEntryTime
+		}
+	}
+	*deliveryStatusLog = res
+
+	return nil
+}
 
 func (s Status) Purchased() bool {
 	return s == StatusPurchased || s == StatusPendingTrans
@@ -53,8 +85,20 @@ type OrderDetails struct {
 	} `json:"details"`
 	HostID       string        `json:"host_id"`
 	Participants []Participant `json:"participants"`
+	Purchase     struct {
+		DeliveryEtaUnix struct {
+			DateUnix int64 `json:"$date"`
+		} `json:"delivery_eta"`
+		DeliveryStatus       DeliveryStatus          `json:"delivery_status"`
+		DeliveryStatusLog    DeliveryStatusToTimeMap `json:"delivery_status_log"`
+		PurchaseDatetimeUnix struct {
+			DateUnix int64 `json:"$date"`
+		} `json:"purchase_datetime"`
+	} `json:"purchase"`
 
 	CreatedAt                time.Time  `json:"-"`
+	DeliveryEta              time.Time  `json:"-"`
+	PurchaseDatetime         time.Time  `json:"-"`
 	ParsedDeliveryCoordinate Coordinate `json:"-"`
 	Host                     string     `json:"-"`
 }
@@ -64,6 +108,10 @@ const (
 	StatusCanceled     Status = "cancelled"
 	StatusPendingTrans Status = "pending_transaction"
 	StatusPurchased    Status = "purchased"
+)
+
+const (
+	DeliveryStatusDelivered DeliveryStatus = "delivered"
 )
 
 const DeliveryCoordinatesPath = "details.delivery_info.location.coordinates.coordinates"
@@ -88,6 +136,9 @@ func ParseOrderDetails(orderDetailsJSON []byte) (*OrderDetails, error) {
 	}
 
 	o.CreatedAt = time.UnixMilli(o.CreatedAtUnix.DateUnix)
+	o.DeliveryEta = time.UnixMilli(o.Purchase.DeliveryEtaUnix.DateUnix)
+	o.PurchaseDatetime = time.UnixMilli(o.Purchase.PurchaseDatetimeUnix.DateUnix)
+
 	return o, nil
 }
 
@@ -116,4 +167,8 @@ func (o *OrderDetails) RateByPerson() (map[string]float64, error) {
 	}
 
 	return output, nil
+}
+
+func (o *OrderDetails) IsDelivered() bool {
+	return o.Purchase.DeliveryStatus == DeliveryStatusDelivered
 }

@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -13,11 +12,15 @@ import (
 
 type EventNotification interface {
 	SendMessage(receiver, event, messageID string) (string, error)
+	EditMessage(receiver, event, messageID string) error
 	AddReaction(receiver, messageID, reaction string) error
 }
 
 type Config struct {
 	TimeoutForReady          time.Duration `env:"ORDER_READY_TIMEOUT" envDefault:"40m"`
+	OrderDoneTimeout         time.Duration `env:"ORDER_DONE_TIMEOUT" envDefault:"3h"`
+	TimeTillGetReadyMessage  time.Duration `env:"TIME_TILL_GET_READY_MESSAGE" envDefault:"7m"`
+	OrderDestinationEmoji    string        `env:"ORDER_DESTINATION_EMOJI" envDefault:"house"`
 	TimeoutForDeliveryRate   time.Duration `env:"GET_DELIVERY_RATE_TIMEOUT" envDefault:"10m"`
 	WaitBetweenStatusCheck   time.Duration `env:"WAIT_BETWEEN_STATUS_CHECK" envDefault:"20s"`
 	DebtReminderInterval     time.Duration `env:"DEBT_REMINDER_INTERVAL" envDefault:"3h"`
@@ -90,22 +93,22 @@ func New(cfg Config, userStore user.Store, debtStore debt.Store, orderStore orde
 	}, nil
 }
 
-func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) bool {
+func (h *Service) informEvent(receiver, event, reactionEmoji, initialMessageID string) (string, error) {
 	if h.eventNotification == nil {
-		return true
+		return "", fmt.Errorf("nil eventNotification")
 	}
 
 	messageID, err := h.eventNotification.SendMessage(receiver, event, initialMessageID)
 	if err != nil {
-		log.Printf("Error informing event to receiver %q: %v\n", receiver, err)
-		return false
+		return "", fmt.Errorf("error replying to message %s: %w", receiver, err)
 	}
 
 	if reactionEmoji == "" {
-		return true
+		return messageID, nil
 	}
 	if err = h.eventNotification.AddReaction(receiver, messageID, reactionEmoji); err != nil {
-		log.Printf("Error adding reaction to message ID %s:%v\n", messageID, err)
+		return messageID, fmt.Errorf("error adding reaction to message %s: %w\n", messageID, err)
 	}
-	return true
+
+	return messageID, nil
 }

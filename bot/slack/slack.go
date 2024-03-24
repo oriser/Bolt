@@ -70,6 +70,16 @@ func (c *Client) SendMessage(receiver, event, messageID string) (string, error) 
 	return ts, nil
 }
 
+func (c *Client) EditMessage(receiver, event, messageID string) error {
+	options := []slack.MsgOption{slack.MsgOptionText(event, false)}
+
+	_, _, _, err := c.UpdateMessage(receiver, messageID, options...)
+	if err != nil {
+		return fmt.Errorf("editing message %s: %w", messageID, err)
+	}
+	return nil
+}
+
 func (c *Client) AddReaction(receiver, messageID, reaction string) error {
 	if err := c.Client.AddReaction(reaction, slack.ItemRef{
 		Channel:   receiver,

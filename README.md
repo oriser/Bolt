@@ -14,6 +14,7 @@ It will even keep reminding the participants to pay until they've marked themsel
 * Automatic monitoring of participants' ordered items and sending how much each participant has to pay, including delivery rate
 * It will try to automatically match the Wolt user to a Slack user and tag the relevant user. In case no matching Slack user is found, an admin can add a custom user with `/add-user` command
 * Per-order debts reminders
+* Send delivery progress emoji art, as well as a "get ready" message when the delivery is approaching
 
 ## Installation
 To install, you need an endpoint running Bolt server and a Slack app.
@@ -39,3 +40,8 @@ Here are the basic steps to install Bolt:
 ![example_removed](docs/assets/examples/debt_removed.png)
 ##### Message sent to the host
 ![example_removed](docs/assets/examples/paid_host.png)
+
+### Delivery progress and a "get ready" message
+![Delivery progress example](docs/assets/examples/delivery_progress.png)
+> [!TIP]
+> Change the destination icon to your company's logo using the `ORDER_DESTINATION_EMOJI` configuration.
