@@ -56,10 +56,6 @@ const (
 	DefaultHost             = "Bolt"
 )
 
-const (
-	HelloPattern = `Hello! I'm about to join group order %s`
-)
-
 var timezones = []string{
 	"Europe/London",       // +0
 	"Asia/Almaty",         // +6
@@ -668,10 +664,13 @@ func TestSlackPurchaseGroup(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, 200, resp.StatusCode)
 
-			// Verifying joined message
-			_, err = WaitForOutboundSlackMessage(WaitForMessageTimeout, tdata.slackServer, fmt.Sprintf(HelloPattern, orderShortID),
-				MessageChannel, timestamp, EqualMatch)
-			require.NoError(t, err)
+			// Verifying joined reaction
+			err = WaitForOutboundReaction(WaitForMessageTimeout, tdata.customSlack, customslack.Reaction{
+				Name:      "eyes",
+				Channel:   MessageChannel,
+				Timestamp: timestamp,
+			})
+			assert.NoError(t, err)
 
 			// Adding relevant participants as users in Slack
 			participantIDsMapping := make(map[string]string)

@@ -64,6 +64,11 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 	h.currentlyWorkingOrders.Store(groupID.ID, nil)
 	defer h.currentlyWorkingOrders.Delete(groupID.ID)
 
+	err := h.eventNotification.AddReaction(req.Channel, req.MessageID, h.cfg.JoinedOrderEmoji)
+	if err != nil {
+		return "", fmt.Errorf("adding reaction to link message: %w", err)
+	}
+
 	groupRate, err := h.getRateForGroup(req.Channel, groupID.ID, req.MessageID)
 	if err != nil {
 		if errors.Is(err, errNotInTime) {
@@ -233,13 +238,13 @@ func (h *Service) saveOrderAsync(order *groupOrder, groupRate GroupRate, receive
 func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRate GroupRate, err error) {
 	shouldHandleOrder := h.shouldHandleOrder()
 
-	msg := fmt.Sprintf("Hello! I'm about to join group order %s", groupID)
 	if !shouldHandleOrder {
-		msg = fmt.Sprintf("%s. But it's too late for me.. I won't track prices for this order :sleeping:", msg)
+		_, err := h.informEvent(receiver, "It's too late for me... I won't track prices for this order :sleeping:", "", messageID)
+		if err != nil {
+			return GroupRate{}, errWontJoin
+		}
 	}
-	if _, err := h.informEvent(receiver, msg, "", messageID); err != nil {
-		return GroupRate{}, errWontJoin
-	}
+
 	order, err := h.joinGroupOrder(groupID)
 	if err != nil {
 		_, _ = h.informEvent(receiver, "I had an error joining the order", "", messageID)
