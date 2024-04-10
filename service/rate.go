@@ -66,7 +66,7 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 
 	err := h.eventNotification.AddReaction(req.Channel, req.MessageID, h.cfg.JoinedOrderEmoji)
 	if err != nil {
-		return "", fmt.Errorf("adding reaction to link message: %w", err)
+		return "", errWontJoin
 	}
 
 	groupRate, err := h.getRateForGroup(req.Channel, groupID.ID, req.MessageID)
