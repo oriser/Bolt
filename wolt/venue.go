@@ -18,21 +18,29 @@ type VenueName struct {
 }
 
 type Venue struct {
+	Alive    uint8 `json:"alive"`
 	Location struct {
 		Coordinates []float64 `json:"coordinates"`
 	} `json:"location"`
 	DeliverySpecs struct {
+		DeliveryEnabled bool        `json:"delivery_enabled"`
 		DeliveryPricing PriceRanges `json:"delivery_pricing"`
 	} `json:"delivery_specs"`
-	Names    []VenueName `json:"name"`
-	Link     string      `json:"public_url"`
-	City     string      `json:"city"`
-	Timezone string      `json:"timezone"`
-	Online   bool        `json:"online"`
+	Names         []VenueName `json:"name"`
+	Link          string      `json:"public_url"`
+	OfflinePeriod struct {
+		End struct {
+			DateUnix int64 `json:"$date"`
+		} `json:"end"`
+	} `json:"offline_period"`
+	Online   bool   `json:"online"`
+	City     string `json:"city"`
+	Timezone string `json:"timezone"`
 
 	Name             string
 	ParsedCoordinate Coordinate     `json:"-"`
 	TimezoneLocation *time.Location `json:"-"`
+	OfflinePeriodEnd time.Time      `json:"-"`
 }
 
 type Coordinate struct {
@@ -74,6 +82,8 @@ func ParseVenue(venuesJSON []byte) (*Venue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unexpected venue timezone: %w", err)
 	}
+
+	v.OfflinePeriodEnd = time.UnixMilli(v.OfflinePeriod.End.DateUnix)
 
 	for _, name := range v.Names {
 		if name.Lang == "en" || v.Name == "" {
@@ -138,4 +148,8 @@ func (v *Venue) CalculateDeliveryRate(source Coordinate) (int, error) {
 	}
 
 	return price / 100, nil
+}
+
+func (v *Venue) IsDelivering() bool {
+	return v.DeliverySpecs.DeliveryEnabled && v.Online && v.Alive != 0
 }

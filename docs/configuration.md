@@ -8,7 +8,7 @@ Bolt is configured using environment variables
 ## Optional Configuration
 * `DONT_JOIN_AFTER` - If defined, Bolt won't join orders after that time. Time is defined in HH:MM format. Default is None (will always join).
 * `DONT_JOIN_AFTER_TZ` - Defining the timezone for the hour defined in `DONT_JOIN_AFTER`. For example: `Europe/London`. Default is none (will be the local time where Bolt is running). 
-* `ORDER_READY_TIMEOUT` - Timeout for waiting for the Wolt group order to be sent in duration format (ex: 1m/1h). After that duration, Bolt will stop tracking that order. Default is 40m (40 minutes).
+* `ORDER_READY_TIMEOUT` - Timeout for waiting for the Wolt group order to be sent in duration format (ex: 1m/1h). After that duration, Bolt will stop tracking that order. Default is 1h (1 hour).
 * `ORDER_DONE_TIMEOUT` - Timeout for waiting for the Wolt group order to be delivered after payment. After that duration, Bolt will stop tracking that order. Default is 3h (3 hours).
 * `TIME_TILL_GET_READY_MESSAGE` - Defines how long before the delivery ETA the "get ready" message will be sent. Default is 7m (7 minutes).
 * `ORDER_DESTINATION_EMOJI` - The emoji used to represent the order's destination in the progress message. Default is :house:.

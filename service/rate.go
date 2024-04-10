@@ -298,39 +298,3 @@ func (h *Service) getRateForGroup(receiver, groupID, messageID string) (groupRat
 	}
 	return h.buildGroupRates(rates, details.Host, deliveryRate), nil
 }
-
-func (h *Service) monitorVenue(ctx context.Context, order *groupOrder, receiver, initialMessageID string) {
-	details, err := order.Details()
-	if err != nil {
-		log.Printf("Error getting details for order %q: %v\n", order.id, err)
-		return
-	}
-
-	// TODO: Configure that
-	ticker := time.NewTicker(30 * time.Second)
-
-	online := true
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			venue, err := order.woltGroup.VenueDetails(details)
-			if err != nil {
-				log.Printf("Error getting venue for order %q: %v\n", order.id, err)
-				continue
-			}
-
-			if !venue.Online && online {
-				_, _ = h.informEvent(receiver, ":red_circle: Pay attention. The venue went offline :(", "", initialMessageID)
-				online = false
-			}
-
-			if venue.Online && !online {
-				_, _ = h.informEvent(receiver, ":large_green_circle: The venue is back online :)", "", initialMessageID)
-				online = true
-			}
-
-		}
-	}
-}
