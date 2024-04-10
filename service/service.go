@@ -21,6 +21,7 @@ type Config struct {
 	OrderDoneTimeout         time.Duration `env:"ORDER_DONE_TIMEOUT" envDefault:"3h"`
 	TimeTillGetReadyMessage  time.Duration `env:"TIME_TILL_GET_READY_MESSAGE" envDefault:"7m"`
 	OrderDestinationEmoji    string        `env:"ORDER_DESTINATION_EMOJI" envDefault:"house"`
+	JoinedOrderEmoji         string        `env:"JOINED_ORDER_EMOJI" envDefault:"eyes"`
 	TimeoutForDeliveryRate   time.Duration `env:"GET_DELIVERY_RATE_TIMEOUT" envDefault:"10m"`
 	WaitBetweenStatusCheck   time.Duration `env:"WAIT_BETWEEN_STATUS_CHECK" envDefault:"20s"`
 	DebtReminderInterval     time.Duration `env:"DEBT_REMINDER_INTERVAL" envDefault:"3h"`
