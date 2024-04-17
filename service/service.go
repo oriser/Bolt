@@ -17,7 +17,7 @@ type EventNotification interface {
 }
 
 type Config struct {
-	TimeoutForReady          time.Duration `env:"ORDER_READY_TIMEOUT" envDefault:"40m"`
+	TimeoutForReady          time.Duration `env:"ORDER_READY_TIMEOUT" envDefault:"1h"`
 	OrderDoneTimeout         time.Duration `env:"ORDER_DONE_TIMEOUT" envDefault:"3h"`
 	TimeTillGetReadyMessage  time.Duration `env:"TIME_TILL_GET_READY_MESSAGE" envDefault:"7m"`
 	OrderDestinationEmoji    string        `env:"ORDER_DESTINATION_EMOJI" envDefault:"house"`

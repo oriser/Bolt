@@ -71,6 +71,10 @@ func (c *Client) SendMessage(receiver, event, messageID string) (string, error) 
 }
 
 func (c *Client) EditMessage(receiver, event, messageID string) error {
+	if messageID == "" {
+		return fmt.Errorf("empty message ID")
+	}
+
 	options := []slack.MsgOption{slack.MsgOptionText(event, false)}
 
 	_, _, _, err := c.UpdateMessage(receiver, messageID, options...)

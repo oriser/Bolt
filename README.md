@@ -15,6 +15,7 @@ It will even keep reminding the participants to pay until they've marked themsel
 * It will try to automatically match the Wolt user to a Slack user and tag the relevant user. In case no matching Slack user is found, an admin can add a custom user with `/add-user` command
 * Per-order debts reminders
 * Send delivery progress emoji art, as well as a "get ready" message when the delivery is approaching
+* Monitor closed venues and receive updates once they are open
 
 ## Installation
 To install, you need an endpoint running Bolt server and a Slack app.
@@ -45,3 +46,6 @@ Here are the basic steps to install Bolt:
 ![Delivery progress example](docs/assets/examples/delivery_progress.png)
 > [!TIP]
 > Change the destination icon to your company's logo using the `ORDER_DESTINATION_EMOJI` configuration.
+
+### Monitor closed venues
+![Venue monitoring example](docs/assets/examples/monitor_venue.png)

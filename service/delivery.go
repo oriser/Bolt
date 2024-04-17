@@ -50,7 +50,7 @@ func (h *Service) buildProgressEmojiArt(startedAt time.Time, deliveryEta time.Ti
 func (h *Service) updateDeliveryProgressMessage(initiatedTransport string, order *groupOrder, details *wolt.OrderDetails, ratesMessage string) error {
 	var err error
 
-	if details.PurchaseDatetime.Equal(time.Unix(0, 0)) {
+	if IsUnixZero(details.PurchaseDatetime) {
 		return nil
 	}
 
@@ -61,7 +61,7 @@ func (h *Service) updateDeliveryProgressMessage(initiatedTransport string, order
 		if !deliveryTimeExists {
 			deliveryTime = time.Now()
 		}
-	} else if !details.DeliveryEta.Equal(time.Unix(0, 0)) {
+	} else if !IsUnixZero(details.DeliveryEta) {
 		deliveryTime = details.DeliveryEta
 	} else {
 		// No delivery ETA yet. Nothing to update.
@@ -98,7 +98,7 @@ func (h *Service) monitorDelivery(initiatedTransport string, order *groupOrder, 
 				getReadyMessageSent = true //nolint:ineffassign
 			}
 			return nil
-		} else if !details.DeliveryEta.Equal(time.Unix(0, 0)) {
+		} else if !IsUnixZero(details.DeliveryEta) {
 			timeToDelivery := time.Until(details.DeliveryEta)
 			if !getReadyMessageSent && timeToDelivery < h.cfg.TimeTillGetReadyMessage {
 				_, _ = h.informEvent(initiatedTransport, "Get ready, delivery coming soon", "", messageID)
