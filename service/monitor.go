@@ -11,7 +11,7 @@ import (
 func (h *Service) buildClosedVenueMessage(offlinePeriodEnd time.Time, timezone *time.Location) string {
 	var sb strings.Builder
 
-	sb.WriteString("Venue is closed for delivery")
+	sb.WriteString(":red_circle: Venue is closed for delivery")
 	if !IsUnixZero(offlinePeriodEnd) {
 		timeFormatString := "{time}"
 		if !IsToday(offlinePeriodEnd, timezone) {
@@ -51,7 +51,7 @@ func (h *Service) monitorVenue(ctx context.Context, order *groupOrder, receiver,
 			}
 
 			if waitingToOpenDeliveries && venue.IsDelivering() {
-				_, _ = h.informEvent(receiver, "Venue is now open for delivery", "", initialMessageID)
+				_, _ = h.informEvent(receiver, ":large_green_circle: Venue is now open for delivery", "", initialMessageID)
 				waitingToOpenDeliveries = false
 			} else if !waitingToOpenDeliveries && !venue.IsDelivering() {
 				_, _ = h.informEvent(receiver, h.buildClosedVenueMessage(venue.OfflinePeriodEnd, venue.TimezoneLocation), "", initialMessageID)
