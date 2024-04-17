@@ -54,7 +54,7 @@ func (h *Service) monitorVenue(ctx context.Context, order *groupOrder, receiver,
 				_, _ = h.informEvent(receiver, ":large_green_circle: Venue is now open for delivery", "", initialMessageID)
 				waitingToOpenDeliveries = false
 			} else if !waitingToOpenDeliveries && !venue.IsDelivering() {
-				_, _ = h.informEvent(receiver, h.buildClosedVenueMessage(venue.OfflinePeriodEnd, venue.TimezoneLocation), "", initialMessageID)
+				venueClosedMessageId, _ = h.informEvent(receiver, h.buildClosedVenueMessage(venue.OfflinePeriodEnd, venue.TimezoneLocation), "", initialMessageID)
 				waitingToOpenDeliveries = true
 				lastOfflinePeriodEnd = venue.OfflinePeriodEnd
 			} else if waitingToOpenDeliveries && lastOfflinePeriodEnd != venue.OfflinePeriodEnd {
