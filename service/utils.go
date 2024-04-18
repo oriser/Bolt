@@ -7,5 +7,5 @@ func IsUnixZero(t time.Time) bool {
 }
 
 func IsToday(t time.Time, timezone *time.Location) bool {
-	return t.In(timezone).Format("2006-01-02") != time.Now().In(timezone).Format("2006-01-02")
+	return t.In(timezone).Format("2006-01-02") == time.Now().In(timezone).Format("2006-01-02")
 }
