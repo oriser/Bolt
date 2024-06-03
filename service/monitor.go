@@ -8,10 +8,15 @@ import (
 	"time"
 )
 
-func (h *Service) buildClosedVenueMessage(offlinePeriodEnd time.Time, timezone *time.Location) string {
+func (h *Service) buildClosedVenueMessage(offlinePeriodEnd time.Time, timezone *time.Location, preorderEnabled bool) string {
 	var sb strings.Builder
 
-	sb.WriteString(":red_circle: Venue is closed for delivery")
+	if preorderEnabled {
+		sb.WriteString(":large_yellow_circle: Venue is accepting only pre-order deliveries")
+	} else {
+		sb.WriteString(":red_circle: Venue is closed for delivery")
+	}
+
 	if !IsUnixZero(offlinePeriodEnd) {
 		timeFormatString := "{time}"
 		if !IsToday(offlinePeriodEnd, timezone) {
@@ -21,7 +26,7 @@ func (h *Service) buildClosedVenueMessage(offlinePeriodEnd time.Time, timezone *
 		sb.WriteString(fmt.Sprintf(" (allegedly until %s)", offlinePeriodEndString))
 	}
 
-	sb.WriteString(" – I'll let you know when it opens")
+	sb.WriteString(" – I'll let you know when it comes back")
 
 	return sb.String()
 }
@@ -50,15 +55,16 @@ func (h *Service) monitorVenue(ctx context.Context, order *groupOrder, receiver,
 				continue
 			}
 
+			isOpenForPreorderDelivery := venue.IsOpenForPreorderDelivery()
 			if waitingToOpenDeliveries && venue.IsDelivering() {
 				_, _ = h.informEvent(receiver, ":large_green_circle: Venue is now open for delivery", "", initialMessageID)
 				waitingToOpenDeliveries = false
 			} else if !waitingToOpenDeliveries && !venue.IsDelivering() {
-				venueClosedMessageId, _ = h.informEvent(receiver, h.buildClosedVenueMessage(venue.OfflinePeriodEnd, venue.TimezoneLocation), "", initialMessageID)
+				venueClosedMessageId, _ = h.informEvent(receiver, h.buildClosedVenueMessage(venue.OfflinePeriodEnd, venue.TimezoneLocation, isOpenForPreorderDelivery), "", initialMessageID)
 				waitingToOpenDeliveries = true
 				lastOfflinePeriodEnd = venue.OfflinePeriodEnd
 			} else if waitingToOpenDeliveries && lastOfflinePeriodEnd != venue.OfflinePeriodEnd {
-				_ = h.eventNotification.EditMessage(receiver, h.buildClosedVenueMessage(venue.OfflinePeriodEnd, venue.TimezoneLocation), venueClosedMessageId)
+				_ = h.eventNotification.EditMessage(receiver, h.buildClosedVenueMessage(venue.OfflinePeriodEnd, venue.TimezoneLocation, isOpenForPreorderDelivery), venueClosedMessageId)
 				lastOfflinePeriodEnd = venue.OfflinePeriodEnd
 			}
 		}

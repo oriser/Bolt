@@ -34,7 +34,8 @@ func (h *Service) buildProgressEmojiArt(startedAt time.Time, deliveryEta time.Ti
 		startedAtString)
 	sb.WriteString(firstLine + "\n")
 
-	deliveryPercentage := time.Since(startedAt).Seconds() / deliveryEta.Sub(startedAt).Seconds()
+	// time.Now() may be after deliveryEta, but we want the percentage to be at most 1
+	deliveryPercentage := math.Min(time.Since(startedAt).Seconds()/deliveryEta.Sub(startedAt).Seconds(), 1)
 	numberOfRoadTilesBehindCourier := int(math.Round(deliveryPercentage * numberOfRoadTiles))
 	secondLine := strings.Repeat(" ", numberOfSpacesBeforeDestinationEmoji) +
 		fmt.Sprintf(":%s:", h.cfg.OrderDestinationEmoji) +
