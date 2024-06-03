@@ -33,7 +33,11 @@ type Venue struct {
 			DateUnix int64 `json:"$date"`
 		} `json:"end"`
 	} `json:"offline_period"`
-	Online   bool   `json:"online"`
+	Online          bool `json:"online"`
+	PreorderEnabled bool `json:"preorder_enabled"`
+	PreorderTimes   struct {
+		Delivery map[string][]interface{} `json:"delivery"`
+	} `json:"preorder_times"`
 	City     string `json:"city"`
 	Timezone string `json:"timezone"`
 
@@ -152,4 +156,8 @@ func (v *Venue) CalculateDeliveryRate(source Coordinate) (int, error) {
 
 func (v *Venue) IsDelivering() bool {
 	return v.DeliverySpecs.DeliveryEnabled && v.Online && v.Alive != 0
+}
+
+func (v *Venue) IsOpenForPreorderDelivery() bool {
+	return v.PreorderEnabled && v.PreorderTimes.Delivery != nil
 }

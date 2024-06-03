@@ -78,6 +78,10 @@ func (h *Service) HandleLinkMessage(req LinksRequest) (string, error) {
 			_, _ = h.informEvent(req.Channel, fmt.Sprintf("Order for group ID %s was canceled", groupID.ID), "", req.MessageID)
 			return "", nil
 		}
+		if strings.Contains(err.Error(), "context canceled while waiting") {
+			_, _ = h.informEvent(req.Channel, "Timed out waiting for order to be ready", "", req.MessageID)
+			return "", nil
+		}
 		log.Printf("Error getting rate for group %s: %v\n", groupID.ID, err)
 		_, _ = h.informEvent(req.Channel, fmt.Sprintf("I had an error getting rate for group ID %s", groupID.ID), "", req.MessageID)
 		return "", nil
