@@ -13,7 +13,7 @@ import (
 	"github.com/oriser/regroup"
 )
 
-var groupLinkRe = regroup.MustCompile(`\/group\/(?P<id>[A-Z0-9]+?)($|\/$)`)
+var groupLinkRe = regroup.MustCompile(`\/group(-order)?\/(?P<id>[A-Z0-9]+?)((\/join)?\/?$)`)
 
 var errWontJoin = errors.New("wont join because the channel is not accessible")
 var errNotInTime = errors.New("order not in tracking time")

@@ -64,6 +64,13 @@ var timezones = []string{
 	"Pacific/Pago_Pago",   // -11
 }
 
+type WoltLinkType int
+
+const (
+	WoltGroupLink WoltLinkType = iota
+	WoltGroupOrderJoinLink
+)
+
 type testData struct {
 	woltServer  *woltserver.WoltServer
 	slackServer *slacktest.Server
@@ -238,7 +245,7 @@ func buildSlackReactionEvent(t *testing.T, itemUser, timestamp, reaction string,
 	return buildGenericSlackEvent(t, &rawEvent)
 }
 
-func buildSlackLinkEvent(t *testing.T, messageTimestamp, groupShortID string) []byte {
+func buildSlackLinkEvent(t *testing.T, messageTimestamp, groupShortID string, linkType WoltLinkType) []byte {
 	t.Helper()
 
 	linkEvent := &slackevents.LinkSharedEvent{
@@ -249,10 +256,19 @@ func buildSlackLinkEvent(t *testing.T, messageTimestamp, groupShortID string) []
 		MessageTimeStamp: messageTimestamp,
 		ThreadTimeStamp:  "ignored",
 	}
+
+	var linkFormatString string
+	switch linkType {
+	case WoltGroupLink:
+		linkFormatString = "https://wolt.com/group/%s"
+	case WoltGroupOrderJoinLink:
+		linkFormatString = "https://wolt.com/en/group-order/%s/join"
+	}
+
 	setLinksToEvent(t, []sharedLinks{
 		{
 			Domain: "wolt.com",
-			URL:    fmt.Sprintf("https://wolt.com/group/%s", groupShortID),
+			URL:    fmt.Sprintf(linkFormatString, groupShortID),
 		},
 	}, linkEvent)
 
@@ -476,6 +492,7 @@ func TestSlackPurchaseGroup(t *testing.T) {
 		slashCommandSender       string
 		addHostToSlack           bool
 		cancelDebts              bool
+		woltLinkType             WoltLinkType
 	}{
 		{
 			name: "Simple no participants",
@@ -621,6 +638,10 @@ func TestSlackPurchaseGroup(t *testing.T) {
 			addHostToSlack: true,
 			host:           "Ori",
 		},
+		{
+			name:         "Join /group-order/ link type",
+			woltLinkType: WoltGroupOrderJoinLink,
+		},
 	}
 	for _, tc := range tests {
 		tc := tc
@@ -659,7 +680,7 @@ func TestSlackPurchaseGroup(t *testing.T) {
 
 			// Sending link event (equal to sending wolt link in a channel)
 			timestamp := utils.GenerateRandomString(utils.NumberLetters, 8)
-			evt := buildSlackLinkEvent(t, timestamp, orderShortID)
+			evt := buildSlackLinkEvent(t, timestamp, orderShortID, tc.woltLinkType)
 			resp, err := http.Post("http://"+tdata.boltAddr+"/events-endpoint", "application/json", bytes.NewReader(evt))
 			require.NoError(t, err)
 			assert.Equal(t, 200, resp.StatusCode)
