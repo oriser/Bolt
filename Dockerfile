@@ -1,4 +1,4 @@
-FROM golang:1.18-buster as builder
+FROM golang:1.22-bookworm as builder
 WORKDIR /go/src/bolt
 COPY . .
 

@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/slack-go/slack"
+
 	"github.com/oriser/bolt/debt"
 	"github.com/oriser/bolt/order"
 	"github.com/oriser/bolt/user"
@@ -12,6 +14,7 @@ import (
 
 type EventNotification interface {
 	SendMessage(receiver, event, messageID string) (string, error)
+	SendBlocksMessage(receiver string, blocks []slack.Block, messageID string) (string, error)
 	EditMessage(receiver, event, messageID string) error
 	AddReaction(receiver, messageID, reaction string) error
 }

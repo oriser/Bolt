@@ -19,6 +19,21 @@ type Participant struct {
 	Amount float64 `json:"amount"`
 }
 
+type VenueOrderCount struct {
+	VenueId       string `db:"venue_id"`
+	VenueName     string `db:"venue_name"`
+	OrderCount    int    `db:"order_count"`
+	VenueLink     string `db:"venue_link"`
+	LastCreatedAt string `db:"last_created_at"` // The driver returns this column as a string
+}
+
+type HostOrderCount struct {
+	HostId        string `db:"host_id"`
+	HostName      string `db:"host"`
+	OrderCount    int    `db:"order_count"`
+	LastCreatedAt string `db:"last_created_at"` // The driver returns this column as a string
+}
+
 type Order struct {
 	ID           string        `db:"id"`
 	OriginalID   string        `db:"original_id"`
@@ -37,4 +52,7 @@ type Order struct {
 
 type Store interface {
 	SaveOrder(ctx context.Context, order *Order) error
+	GetVenuesWithMostOrders(startTime time.Time, limit uint64, channelId string, filteredVenueIds []string) ([]VenueOrderCount, error)
+	GetHostsWithMostOrders(startTime time.Time, limit uint64, channelId string, filteredHostIds []string) ([]HostOrderCount, error)
+	GetActiveChannelIds(lastDateConsideredActive time.Time) ([]string, error)
 }

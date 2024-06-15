@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/robfig/cron/v3"
+
 	"github.com/caarlos0/env/v6"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	"github.com/jmoiron/sqlx"
@@ -26,6 +28,17 @@ type Config struct {
 func (c Config) String() string {
 	res, _ := json.Marshal(&c)
 	return string(res)
+}
+
+func startDigestScheduler(serviceHandler *service.Service) (*cron.Cron, error) {
+	scheduler := cron.New()
+	_, err := scheduler.AddFunc("@monthly", serviceHandler.SendMonthlyDigest)
+	if err != nil {
+		return nil, fmt.Errorf("error calling AddFunc: %w", err)
+	}
+	scheduler.Start()
+
+	return scheduler, nil
 }
 
 func Run() error {
@@ -61,6 +74,12 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("new service: %w", err)
 	}
+
+	digestScheduler, err := startDigestScheduler(serviceHandler)
+	if err != nil {
+		return fmt.Errorf("starting digest scheduler: %w", err)
+	}
+	defer digestScheduler.Stop()
 
 	slackBot := slackClient.ServiceBot(serviceHandler)
 	if err := slackBot.ListenAndServe(context.Background()); err != nil {
