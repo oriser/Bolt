@@ -30,7 +30,7 @@ func buildTopVenuesMessageBlocks(monthlyTopVenues []order.VenueOrderCount, month
 		nil,
 		[]*slack.TextBlockObject{
 			slack.NewTextBlockObject("mrkdwn", ":cook: *Top restaurants*", false, false),
-			slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*%s/Total*", dateOneMonthAgo.Month().String()), false, false),
+			slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*%s (Total)*", dateOneMonthAgo.Month().String()), false, false),
 		},
 		nil,
 	)
@@ -53,7 +53,7 @@ func buildTopVenuesMessageBlocks(monthlyTopVenues []order.VenueOrderCount, month
 			leftColumnString += " :new:"
 		}
 
-		rightColumnString := fmt.Sprintf("%d/%d", venue.OrderCount, totalOrderCount)
+		rightColumnString := fmt.Sprintf("%d (%d)", venue.OrderCount, totalOrderCount)
 
 		topVenuesRows = append(topVenuesRows,
 			slack.NewTextBlockObject("mrkdwn", leftColumnString, false, false),
@@ -79,7 +79,7 @@ func buildTopHostsMessageBlocks(monthlyTopHosts []order.HostOrderCount, monthlyT
 		nil,
 		[]*slack.TextBlockObject{
 			slack.NewTextBlockObject("mrkdwn", ":star: *Top hosts*", false, false),
-			slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*%s/Total*", dateOneMonthAgo.Month().String()), false, false),
+			slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*%s (Total)*", dateOneMonthAgo.Month().String()), false, false),
 		},
 		nil,
 	)
@@ -101,7 +101,7 @@ func buildTopHostsMessageBlocks(monthlyTopHosts []order.HostOrderCount, monthlyT
 			leftColumnString += " :new:"
 		}
 
-		rightColumnString := fmt.Sprintf("%d/%d", host.OrderCount, totalOrderCount)
+		rightColumnString := fmt.Sprintf("%d (%d)", host.OrderCount, totalOrderCount)
 
 		topHostsRows = append(topHostsRows,
 			slack.NewTextBlockObject("mrkdwn", leftColumnString, false, false),
