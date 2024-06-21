@@ -27,11 +27,11 @@ type VenueOrderCount struct {
 	LastCreatedAt string `db:"last_created_at"` // The driver returns this column as a string
 }
 
-type HostOrderCount struct {
-	HostId        string `db:"host_id"`
-	HostName      string `db:"host"`
-	OrderCount    int    `db:"order_count"`
-	LastCreatedAt string `db:"last_created_at"` // The driver returns this column as a string
+type MouthsFedCount struct {
+	HostId         string `db:"host_id"`
+	HostName       string `db:"host"`
+	MouthsFedCount int    `db:"mouths_fed_count"`
+	LastCreatedAt  string `db:"last_created_at"` // The driver returns this column as a string
 }
 
 type Order struct {
@@ -53,6 +53,6 @@ type Order struct {
 type Store interface {
 	SaveOrder(ctx context.Context, order *Order) error
 	GetVenuesWithMostOrders(startTime time.Time, limit uint64, channelId string, filteredVenueIds []string) ([]VenueOrderCount, error)
-	GetHostsWithMostOrders(startTime time.Time, limit uint64, channelId string, filteredHostIds []string) ([]HostOrderCount, error)
+	GetHostsWithMostMouthsFed(startTime time.Time, limit uint64, channelId string, filteredHostIds []string) ([]MouthsFedCount, error)
 	GetActiveChannelIds(lastDateConsideredActive time.Time) ([]string, error)
 }

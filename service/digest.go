@@ -69,16 +69,16 @@ func buildTopVenuesMessageBlocks(monthlyTopVenues []order.VenueOrderCount, month
 	return topVenuesBlocks, nil
 }
 
-func buildTopHostsMessageBlocks(monthlyTopHosts []order.HostOrderCount, monthlyTopHostsTotalCounts []order.HostOrderCount) ([]slack.Block, error) {
-	hostIdToTotalOrderCount := make(map[string]int)
+func buildTopHostsMessageBlocks(monthlyTopHosts []order.MouthsFedCount, monthlyTopHostsTotalCounts []order.MouthsFedCount) ([]slack.Block, error) {
+	hostIdToTotalMouthsFedCount := make(map[string]int)
 	for _, host := range monthlyTopHostsTotalCounts {
-		hostIdToTotalOrderCount[host.HostId] = host.OrderCount
+		hostIdToTotalMouthsFedCount[host.HostId] = host.MouthsFedCount
 	}
 
 	topHostsHeader := slack.NewSectionBlock(
 		nil,
 		[]*slack.TextBlockObject{
-			slack.NewTextBlockObject("mrkdwn", ":star: *Top hosts*", false, false),
+			slack.NewTextBlockObject("mrkdwn", ":spoon: *Most mouths fed*", false, false),
 			slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*%s (Total)*", dateOneMonthAgo.Month().String()), false, false),
 		},
 		nil,
@@ -86,7 +86,7 @@ func buildTopHostsMessageBlocks(monthlyTopHosts []order.HostOrderCount, monthlyT
 
 	topHostsRows := make([]*slack.TextBlockObject, 0, len(monthlyTopHosts)*2)
 	for i, host := range monthlyTopHosts {
-		totalOrderCount, hostExists := hostIdToTotalOrderCount[host.HostId]
+		totalMouthsFedCount, hostExists := hostIdToTotalMouthsFedCount[host.HostId]
 		if !hostExists {
 			return nil, fmt.Errorf("host %s (%s) is not in monthlyTopHostsTotalCounts", host.HostId, host.HostName)
 		}
@@ -97,11 +97,11 @@ func buildTopHostsMessageBlocks(monthlyTopHosts []order.HostOrderCount, monthlyT
 		}
 
 		leftColumnString := fmt.Sprintf("%s %s%s%s", positionEmoji, UnicodeLeftToRightMark, host.HostName, UnicodeLeftToRightMark)
-		if host.OrderCount == totalOrderCount {
+		if host.MouthsFedCount == totalMouthsFedCount {
 			leftColumnString += " :new:"
 		}
 
-		rightColumnString := fmt.Sprintf("%d (%d)", host.OrderCount, totalOrderCount)
+		rightColumnString := fmt.Sprintf("%d (%d)", host.MouthsFedCount, totalMouthsFedCount)
 
 		topHostsRows = append(topHostsRows,
 			slack.NewTextBlockObject("mrkdwn", leftColumnString, false, false),
@@ -125,10 +125,10 @@ func venueOrderCountsToVenueIds(venueOrderCounts []order.VenueOrderCount) []stri
 	return venueIds
 }
 
-func hostOrderCountsToHostIds(hostOrderCounts []order.HostOrderCount) []string {
+func mouthsFedCountsToHostIds(mouthsFedCounts []order.MouthsFedCount) []string {
 	var hostIds []string
-	for _, hostOrderCount := range hostOrderCounts {
-		hostIds = append(hostIds, hostOrderCount.HostId)
+	for _, mouthsFedCount := range mouthsFedCounts {
+		hostIds = append(hostIds, mouthsFedCount.HostId)
 	}
 	return hostIds
 }
@@ -149,13 +149,13 @@ func (h *Service) getTopVenuesMessageBlocks(channelId string) ([]slack.Block, er
 }
 
 func (h *Service) getTopHostsMessageBlocks(channelId string) ([]slack.Block, error) {
-	monthlyTopHosts, err := h.orderStore.GetHostsWithMostOrders(dateOneMonthAgo, numberOfDigestRows, channelId, []string{})
+	monthlyTopHosts, err := h.orderStore.GetHostsWithMostMouthsFed(dateOneMonthAgo, numberOfDigestRows, channelId, []string{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting top hosts of the last month: %w", err)
 	}
 
-	monthlyTopHostIds := hostOrderCountsToHostIds(monthlyTopHosts)
-	monthlyTopHostsTotalCounts, err := h.orderStore.GetHostsWithMostOrders(time.Time{}, numberOfDigestRows, channelId, monthlyTopHostIds)
+	monthlyTopHostIds := mouthsFedCountsToHostIds(monthlyTopHosts)
+	monthlyTopHostsTotalCounts, err := h.orderStore.GetHostsWithMostMouthsFed(time.Time{}, numberOfDigestRows, channelId, monthlyTopHostIds)
 	if err != nil {
 		return nil, fmt.Errorf("error getting top hosts of all time: %w", err)
 	}
