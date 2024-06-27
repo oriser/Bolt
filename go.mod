@@ -17,7 +17,7 @@ require (
 	github.com/oriser/regroup v0.0.0-20201024192559-010c434ff8f3
 	github.com/paul-mannino/go-fuzzywuzzy v0.0.0-20200127021948-54652b135d0e
 	github.com/prometheus/common v0.10.0
-	github.com/slack-go/slack v0.10.3
+	github.com/slack-go/slack v0.13.0
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/net v0.0.0-20211013171255-e13a2654a71e
 )
