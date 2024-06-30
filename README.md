@@ -16,6 +16,7 @@ It will even keep reminding the participants to pay until they've marked themsel
 * Per-order debts reminders
 * Send delivery progress emoji art, as well as a "get ready" message when the delivery is approaching
 * Monitor closed venues and receive updates once they are open
+* Send a monthly digest summarizing the past month's activity
 
 ## Installation
 To install, you need an endpoint running Bolt server and a Slack app.
@@ -49,3 +50,6 @@ Here are the basic steps to install Bolt:
 
 ### Monitor closed venues
 ![Venue monitoring example](docs/assets/examples/monitor_venue.png)
+
+### Bolt's monthly digest
+![Monthly digest example](docs/assets/examples/monthly_digest.png)

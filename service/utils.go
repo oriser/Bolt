@@ -2,6 +2,8 @@ package service
 
 import "time"
 
+const UnicodeLeftToRightMark = "\u200E"
+
 func IsUnixZero(t time.Time) bool {
 	return t.Equal(time.Unix(0, 0))
 }
