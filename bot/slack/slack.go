@@ -70,6 +70,18 @@ func (c *Client) SendMessage(receiver, event, messageID string) (string, error) 
 	return ts, nil
 }
 
+func (c *Client) SendBlocksMessage(receiver string, blocks []slack.Block, messageID string) (string, error) {
+	options := []slack.MsgOption{slack.MsgOptionBlocks(blocks...), slack.MsgOptionDisableMediaUnfurl()}
+	if messageID != "" {
+		options = append(options, slack.MsgOptionTS(messageID))
+	}
+	_, ts, err := c.PostMessage(receiver, options...)
+	if err != nil {
+		return "", fmt.Errorf("posting blocks message: %w", err)
+	}
+	return ts, nil
+}
+
 func (c *Client) EditMessage(receiver, event, messageID string) error {
 	if messageID == "" {
 		return fmt.Errorf("empty message ID")

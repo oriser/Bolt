@@ -42,3 +42,86 @@ func (d *DBStore) SaveOrder(_ context.Context, order *order.Order) error {
 
 	return nil
 }
+
+func (d *DBStore) GetVenuesWithMostOrders(startTime time.Time, limit uint64, channelId string, filteredVenueIds []string) ([]order.VenueOrderCount, error) {
+	query := sq.Select("venue_id", "venue_name", "venue_link", "COUNT(*) as order_count", "MAX(created_at) as last_created_at").
+		From("orders").
+		Where(sq.Eq{"receiver": channelId}).
+		Where(sq.Eq{"status": order.StatusDone}).
+		Where(sq.GtOrEq{"created_at": startTime}).
+		GroupBy("venue_id").
+		OrderBy("order_count DESC", "last_created_at ASC")
+	if len(filteredVenueIds) > 0 {
+		query = query.Where(sq.Eq{"venue_id": filteredVenueIds})
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("building SELECT query: %w", err)
+	}
+
+	var venueOrderCounts []order.VenueOrderCount
+	err = d.db.Select(&venueOrderCounts, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("executing SELECT query: %w", err)
+	}
+
+	return venueOrderCounts, nil
+}
+
+func (d *DBStore) GetHostsWithMostMouthsFed(startTime time.Time, limit uint64, channelId string, filteredHostIds []string) ([]order.MouthsFedCount, error) {
+	subquery := sq.Select("orders.*", "json_each.value as participant").
+		From("orders, json_each(orders.participants)").
+		Where(sq.Gt{"json_extract(participant, '$.amount')": 0}).
+		Where("json_extract(participant, '$.name') != host").
+		Where(sq.Eq{"receiver": channelId}).
+		Where(sq.Eq{"status": order.StatusDone}).
+		Where(sq.GtOrEq{"created_at": startTime})
+	if len(filteredHostIds) > 0 {
+		subquery = subquery.Where(sq.Eq{"host_id": filteredHostIds})
+	}
+
+	query := sq.Select("host_id", "host", "COUNT(*) as mouths_fed_count", "MAX(created_at) as last_created_at").
+		FromSelect(subquery, "extracted_participants").
+		GroupBy("host_id").
+		OrderBy("mouths_fed_count DESC", "last_created_at ASC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("building SELECT query: %w", err)
+	}
+
+	var mouthsFedCount []order.MouthsFedCount
+	err = d.db.Select(&mouthsFedCount, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("executing SELECT query: %w", err)
+	}
+
+	return mouthsFedCount, nil
+}
+
+func (d *DBStore) GetActiveChannelIds(lastDateConsideredActive time.Time) ([]string, error) {
+	query := sq.Select("receiver").
+		From("orders").
+		Where(sq.GtOrEq{"created_at": lastDateConsideredActive}).
+		Distinct()
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("building SELECT query: %w", err)
+	}
+
+	var activeChannelIds []string
+	err = d.db.Select(&activeChannelIds, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("executing SELECT query: %w", err)
+	}
+
+	return activeChannelIds, nil
+}
