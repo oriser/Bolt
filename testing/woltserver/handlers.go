@@ -92,6 +92,30 @@ func (ws *WoltServer) orderDetailsHandler(res http.ResponseWriter, req *http.Req
 	}
 }
 
+func (ws *WoltServer) orderDetailsFromShortID(res http.ResponseWriter, req *http.Request) {
+	id, err := ws.extractID(req)
+	if err != nil {
+		ws.writeError(res, http.StatusBadRequest, err)
+		return
+	}
+
+	order, ok, err := ws.getOrderByShortID(id)
+	if err != nil {
+		ws.writeError(res, http.StatusInternalServerError, err)
+		return
+	}
+	if !ok {
+		ws.writeError(res, http.StatusBadRequest, ErrNoSuchOrder)
+		return
+	}
+
+	jsonTmpl := template.Must(template.New("details").Funcs(sprig.HtmlFuncMap()).Parse(detailsTemplate))
+	if err = jsonTmpl.Execute(res, order); err != nil {
+		ws.writeError(res, http.StatusInternalServerError, err)
+		return
+	}
+}
+
 func (ws *WoltServer) getVenueHandler(res http.ResponseWriter, req *http.Request) {
 	id, err := ws.extractID(req)
 	if err != nil {

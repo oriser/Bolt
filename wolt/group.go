@@ -132,6 +132,38 @@ func (g *Group) joinApiAddr(p string) string {
 	return u.String()
 }
 
+// This function is used to get the real group ID (instead of the short one) from the Wolt API.
+// It sends a GET request to the Wolt API to get the group details JSON and extracts the ID from it.
+func (g *Group) assignIDFromExternalScript() error {
+	req, err := g.prepareReq("GET", g.joinApiAddr(fmt.Sprintf("/v1/group_order/guest/code/%s", g.prettyID)), nil, nil)
+	if err != nil {
+		return fmt.Errorf("new request: %w", err)
+	}
+
+	resp, err := g.sendReq(req)
+	if err != nil {
+		return fmt.Errorf("getting http response: %w", err)
+	}
+
+	fullResponse, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
+	if err != nil {
+		return fmt.Errorf("reading output: %w", err)
+	}
+
+	gc, err := gabs.ParseJSON(fullResponse)
+	if err != nil {
+		return fmt.Errorf("parse group order JSON: %w", err)
+	}
+
+	gc = gc.S("id")
+	if gc == nil {
+		return fmt.Errorf("find group id from JSON")
+	}
+
+	g.id = gc.Data().(string)
+	return nil
+}
+
 func (g *Group) assignIDFromHTML(data io.Reader) error {
 	doc, err := html.Parse(data)
 	if err != nil {
@@ -218,17 +250,7 @@ func (g *Group) joinByRealID() error {
 }
 
 func (g *Group) Join() error {
-	req, err := g.prepareReq("GET", g.joinBaseAddr(fmt.Sprintf("/en/group-order/%s/join", g.prettyID)), nil, nil)
-	if err != nil {
-		return fmt.Errorf("new request: %w", err)
-	}
-
-	resp, err := g.sendReq(req)
-	if err != nil {
-		return fmt.Errorf("getting http response: %w", err)
-	}
-
-	if err := g.assignIDFromHTML(resp.Body); err != nil {
+	if err := g.assignIDFromExternalScript(); err != nil {
 		return fmt.Errorf("getting real group ID: %w", err)
 	}
 
