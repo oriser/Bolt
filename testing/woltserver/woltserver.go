@@ -48,6 +48,7 @@ func (ws *WoltServer) registerDefaults() {
 	defaults := map[string]http.HandlerFunc{
 		"/en/group-order/{id}/join":                  ws.joinByShortIDHandler,
 		"/v1/group_order/guest/{id}/participants/me": ws.orderDetailsHandler,
+		"/v1/group_order/guest/code/{id}":            ws.orderDetailsFromShortID,
 		"/v1/group_order/guest/join/{id}":            ws.joinByIDHandler,
 		"/v3/venues/{id}":                            ws.getVenueHandler,
 	}
